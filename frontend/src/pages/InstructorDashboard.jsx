@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NeonCard } from '../components/NeonCard';
-import { Activity, LogOut, Users, Send, MessageCircle, BarChart3 } from 'lucide-react';
+import { Activity, LogOut, Users, Send, MessageCircle, BarChart3, Apple, Save, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 const API = 'http://localhost:5000/api';
@@ -14,6 +14,15 @@ const InstructorDashboard = () => {
     const [msgText, setMsgText] = useState('');
     const [msgStatus, setMsgStatus] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // Diet plan state
+    const [dietPlan, setDietPlan] = useState(null);
+    const [dietForm, setDietForm] = useState({
+        protein_g: '', carbs_g: '', kcal_goal: '',
+        breakfast: '', lunch: '', dinner: '', snacks: '', notes: ''
+    });
+    const [dietSaving, setDietSaving] = useState(false);
+    const [dietMsg, setDietMsg] = useState(null);
 
     useEffect(() => {
         const fetchStudents = async () => {
@@ -35,6 +44,7 @@ const InstructorDashboard = () => {
     useEffect(() => {
         if (selectedStudent) {
             fetchStudentAttendance(selectedStudent.member_id);
+            fetchDietPlan(selectedStudent.member_id);
         }
     }, [selectedStudent]);
 
@@ -44,6 +54,72 @@ const InstructorDashboard = () => {
             setStudentAttendance(res.data);
         } catch (err) {
             console.error('Failed to fetch attendance', err);
+        }
+    };
+
+    const fetchDietPlan = async (memberId) => {
+        try {
+            const res = await axios.get(`${API}/member/${memberId}/diet-plan`);
+            const plan = res.data;
+            setDietPlan(plan);
+            if (plan) {
+                setDietForm({
+                    protein_g: plan.protein_g || '',
+                    carbs_g: plan.carbs_g || '',
+                    kcal_goal: plan.kcal_goal || '',
+                    breakfast: plan.breakfast || '',
+                    lunch: plan.lunch || '',
+                    dinner: plan.dinner || '',
+                    snacks: plan.snacks || '',
+                    notes: plan.notes || ''
+                });
+            } else {
+                setDietForm({ protein_g: '', carbs_g: '', kcal_goal: '', breakfast: '', lunch: '', dinner: '', snacks: '', notes: '' });
+            }
+        } catch (err) {
+            console.error('Failed to fetch diet plan', err);
+            setDietPlan(null);
+            setDietForm({ protein_g: '', carbs_g: '', kcal_goal: '', breakfast: '', lunch: '', dinner: '', snacks: '', notes: '' });
+        }
+    };
+
+    const handleSaveDiet = async () => {
+        if (!dietForm.protein_g || !dietForm.carbs_g || !dietForm.kcal_goal) {
+            setDietMsg({ type: 'error', text: 'Protein, Carbs and Kcal Goal are required!' });
+            return;
+        }
+        setDietSaving(true);
+        setDietMsg(null);
+        try {
+            if (dietPlan) {
+                await axios.put(`${API}/diet-plan/${dietPlan.diet_plan_id}`, dietForm);
+            } else {
+                await axios.post(`${API}/instructor/${user.id}/diet-plan`, {
+                    ...dietForm,
+                    member_id: selectedStudent.member_id
+                });
+            }
+            setDietMsg({ type: 'success', text: dietPlan ? 'Diet plan updated!' : 'Diet plan created!' });
+            fetchDietPlan(selectedStudent.member_id);
+            setTimeout(() => setDietMsg(null), 3000);
+        } catch (err) {
+            setDietMsg({ type: 'error', text: 'Failed to save diet plan.' });
+        } finally {
+            setDietSaving(false);
+        }
+    };
+
+    const handleDeleteDiet = async () => {
+        if (!dietPlan) return;
+        if (!window.confirm('Delete this diet plan?')) return;
+        try {
+            await axios.delete(`${API}/diet-plan/${dietPlan.diet_plan_id}`);
+            setDietPlan(null);
+            setDietForm({ protein_g: '', carbs_g: '', kcal_goal: '', breakfast: '', lunch: '', dinner: '', snacks: '', notes: '' });
+            setDietMsg({ type: 'success', text: 'Diet plan deleted.' });
+            setTimeout(() => setDietMsg(null), 3000);
+        } catch (err) {
+            setDietMsg({ type: 'error', text: 'Failed to delete diet plan.' });
         }
     };
 
@@ -74,6 +150,15 @@ const InstructorDashboard = () => {
         );
     }
 
+    const inputStyle = {
+        width: '100%', padding: '0.6rem 0.75rem',
+        backgroundColor: 'rgba(11, 12, 16, 0.5)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '0.4rem', color: 'var(--text-primary)',
+        outline: 'none', fontFamily: 'inherit', fontSize: '0.9rem'
+    };
+
+    const labelStyle = { color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem', fontWeight: '600' };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-dark)' }}>
@@ -211,6 +296,93 @@ const InstructorDashboard = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Diet Plan Editor */}
+                                <div className="neon-card">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                                            <Apple size={20} color="var(--neon-green)" /> Diet Plan for {selectedStudent.first_name}
+                                        </h3>
+                                        {dietPlan && (
+                                            <button onClick={handleDeleteDiet} style={{
+                                                background: 'none', border: '1px solid var(--danger-red)',
+                                                color: 'var(--danger-red)', padding: '0.3rem 0.7rem',
+                                                borderRadius: '0.3rem', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem'
+                                            }}>
+                                                <Trash2 size={14} /> Delete
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Required: Macro Goals */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                                        <div>
+                                            <label style={labelStyle}>Protein (g) *</label>
+                                            <input type="number" value={dietForm.protein_g} onChange={e => setDietForm({ ...dietForm, protein_g: e.target.value })}
+                                                placeholder="e.g. 180" style={{ ...inputStyle, borderColor: 'var(--neon-green)' }} />
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Carbs (g) *</label>
+                                            <input type="number" value={dietForm.carbs_g} onChange={e => setDietForm({ ...dietForm, carbs_g: e.target.value })}
+                                                placeholder="e.g. 250" style={{ ...inputStyle, borderColor: 'var(--electric-purple)' }} />
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Kcal Goal *</label>
+                                            <input type="number" value={dietForm.kcal_goal} onChange={e => setDietForm({ ...dietForm, kcal_goal: e.target.value })}
+                                                placeholder="e.g. 2800" style={{ ...inputStyle, borderColor: '#FF6B6B' }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Optional: Meals */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                                        <div>
+                                            <label style={labelStyle}>Breakfast</label>
+                                            <input type="text" value={dietForm.breakfast} onChange={e => setDietForm({ ...dietForm, breakfast: e.target.value })}
+                                                placeholder="Optional" style={inputStyle} />
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Lunch</label>
+                                            <input type="text" value={dietForm.lunch} onChange={e => setDietForm({ ...dietForm, lunch: e.target.value })}
+                                                placeholder="Optional" style={inputStyle} />
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Dinner</label>
+                                            <input type="text" value={dietForm.dinner} onChange={e => setDietForm({ ...dietForm, dinner: e.target.value })}
+                                                placeholder="Optional" style={inputStyle} />
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Snacks</label>
+                                            <input type="text" value={dietForm.snacks} onChange={e => setDietForm({ ...dietForm, snacks: e.target.value })}
+                                                placeholder="Optional" style={inputStyle} />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={labelStyle}>Notes</label>
+                                        <textarea value={dietForm.notes} onChange={e => setDietForm({ ...dietForm, notes: e.target.value })}
+                                            placeholder="Any additional notes for the member..." rows={2}
+                                            style={{ ...inputStyle, resize: 'vertical' }} />
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <button onClick={handleSaveDiet} disabled={dietSaving} style={{
+                                            padding: '0.6rem 1.5rem', background: 'transparent',
+                                            border: '1px solid var(--neon-green)', color: 'var(--neon-green)',
+                                            borderRadius: '0.4rem', cursor: dietSaving ? 'not-allowed' : 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                            fontWeight: '600', transition: 'all 0.3s'
+                                        }}>
+                                            <Save size={16} /> {dietSaving ? 'Saving...' : dietPlan ? 'Update Diet Plan' : 'Create Diet Plan'}
+                                        </button>
+                                        {dietMsg && (
+                                            <span style={{
+                                                fontSize: '0.85rem',
+                                                color: dietMsg.type === 'success' ? 'var(--neon-green)' : 'var(--danger-red)'
+                                            }}>{dietMsg.text}</span>
+                                        )}
+                                    </div>
+                                </div>
 
                                 {/* Send Message */}
                                 <div className="neon-card">

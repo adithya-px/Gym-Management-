@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NeonCard } from '../components/NeonCard';
-import { Calendar, Activity, Info, LogOut, DollarSign, MessageCircle, User } from 'lucide-react';
+import { Calendar, Activity, Info, LogOut, DollarSign, MessageCircle, User, Apple } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import axios from 'axios';
 import '../chartSetup';
@@ -13,19 +13,23 @@ const MemberDashboard = () => {
     const [stats, setStats] = useState(null);
     const [charts, setCharts] = useState(null);
     const [messages, setMessages] = useState([]);
+    const [dietPlan, setDietPlan] = useState(null);
+    const [showBarChart, setShowBarChart] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [statsRes, chartsRes, msgRes] = await Promise.all([
+                const [statsRes, chartsRes, msgRes, dietRes] = await Promise.all([
                     axios.get(`${API}/member/${user.id}/stats`),
                     axios.get(`${API}/member/${user.id}/charts`),
-                    axios.get(`${API}/member/${user.id}/messages`)
+                    axios.get(`${API}/member/${user.id}/messages`),
+                    axios.get(`${API}/member/${user.id}/diet-plan`).catch(() => ({ data: null }))
                 ]);
                 setStats(statsRes.data);
                 setCharts(chartsRes.data);
                 setMessages(msgRes.data);
+                setDietPlan(dietRes.data);
             } catch (err) {
                 console.error('Failed to fetch member data', err);
             } finally {
@@ -46,7 +50,7 @@ const MemberDashboard = () => {
         );
     }
 
-    const attendanceData = charts ? {
+    const attendanceData = charts && charts.attendance ? {
         labels: charts.attendance.labels,
         datasets: [{
             label: 'Total Visits (Monthly)',
@@ -56,6 +60,8 @@ const MemberDashboard = () => {
             barPercentage: 0.6,
         }]
     } : null;
+
+    const attendanceBlocks = charts ? charts.attendance_blocks : null;
 
     const payments = charts ? charts.payments : [];
 
@@ -126,11 +132,66 @@ const MemberDashboard = () => {
 
                 {/* Data Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                    {/* Monthly Attendance Chart */}
-                    {attendanceData && (
+                    {/* Monthly Attendance Chart / Blocks */}
+                    {attendanceData && attendanceBlocks && (
                         <div className="neon-card">
-                            <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontFamily: 'Outfit' }}>Attendance History</h3>
-                            <Bar data={attendanceData} options={{ responsive: true, maintainAspectRatio: true }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit', margin: 0 }}>Attendance History</h3>
+                                <button onClick={() => setShowBarChart(!showBarChart)} style={{
+                                    background: 'transparent',
+                                    border: '1px solid var(--electric-blue)',
+                                    color: 'var(--electric-blue)',
+                                    padding: '0.4rem 0.8rem',
+                                    borderRadius: '0.4rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    transition: 'all 0.3s'
+                                }}>
+                                    {showBarChart ? 'Show Recent Blocks' : 'Show Monthly Chart'}
+                                </button>
+                            </div>
+
+                            {showBarChart ? (
+                                <Bar data={attendanceData} options={{ responsive: true, maintainAspectRatio: true }} />
+                            ) : (
+                                <div>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                                        {attendanceBlocks.labels.map((label, index) => {
+                                            const isPresent = attendanceBlocks.data[index] === 1;
+                                            return (
+                                                <div key={index} style={{
+                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+                                                }}>
+                                                    <div
+                                                        title={`${label}: ${isPresent ? 'Present' : 'Absent'}`}
+                                                        style={{
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '4px',
+                                                            backgroundColor: isPresent ? 'var(--neon-green)' : 'rgba(255,255,255,0.05)',
+                                                            border: isPresent ? '1px solid var(--neon-green)' : '1px solid rgba(255,255,255,0.1)',
+                                                            boxShadow: isPresent ? '0 0 8px rgba(102, 252, 241, 0.4)' : 'none',
+                                                            transition: 'all 0.2s',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    ></div>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                                        {label.split(' ')[1] ? label.split(' ')[1] : label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', justifyContent: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: 'var(--neon-green)', boxShadow: '0 0 8px rgba(102, 252, 241, 0.4)' }}></div> Present
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}></div> Absent
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -162,6 +223,68 @@ const MemberDashboard = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Diet Plan */}
+                {dietPlan && (
+                    <div className="neon-card" style={{ marginBottom: '2rem' }}>
+                        <h3 style={{ color: 'var(--text-primary)', marginBottom: '1.5rem', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Apple size={24} color="var(--neon-green)" /> Your Assigned Diet Plan
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ backgroundColor: 'rgba(11, 12, 16, 0.5)', padding: '1rem', borderRadius: '0.5rem', borderLeft: '3px solid var(--neon-green)' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Protein Goal</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--neon-green)' }}>{dietPlan.protein_g}g</div>
+                            </div>
+                            <div style={{ backgroundColor: 'rgba(11, 12, 16, 0.5)', padding: '1rem', borderRadius: '0.5rem', borderLeft: '3px solid var(--electric-purple)' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Carbs Goal</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--electric-purple)' }}>{dietPlan.carbs_g}g</div>
+                            </div>
+                            <div style={{ backgroundColor: 'rgba(11, 12, 16, 0.5)', padding: '1rem', borderRadius: '0.5rem', borderLeft: '3px solid #FF6B6B' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Daily Calories</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#FF6B6B' }}>{dietPlan.kcal_goal} kcal</div>
+                            </div>
+                        </div>
+
+                        {(dietPlan.breakfast || dietPlan.lunch || dietPlan.dinner || dietPlan.snacks) && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                                {dietPlan.breakfast && (
+                                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--electric-blue)', marginBottom: '0.25rem', fontWeight: '600' }}>Breakfast</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{dietPlan.breakfast}</div>
+                                    </div>
+                                )}
+                                {dietPlan.lunch && (
+                                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--electric-blue)', marginBottom: '0.25rem', fontWeight: '600' }}>Lunch</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{dietPlan.lunch}</div>
+                                    </div>
+                                )}
+                                {dietPlan.dinner && (
+                                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--electric-blue)', marginBottom: '0.25rem', fontWeight: '600' }}>Dinner</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{dietPlan.dinner}</div>
+                                    </div>
+                                )}
+                                {dietPlan.snacks && (
+                                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--electric-blue)', marginBottom: '0.25rem', fontWeight: '600' }}>Snacks</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{dietPlan.snacks}</div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {dietPlan.notes && (
+                            <div style={{ padding: '1rem', backgroundColor: 'rgba(69, 162, 158, 0.1)', borderRadius: '0.5rem', border: '1px solid rgba(69, 162, 158, 0.3)' }}>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--neon-green)', marginBottom: '0.25rem', fontWeight: '600' }}>Coach's Notes</div>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{dietPlan.notes}</div>
+                            </div>
+                        )}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1rem', textAlign: 'right' }}>
+                            Last updated: {dietPlan.updated_at} by Coach {dietPlan.instructor_name}
+                        </div>
+                    </div>
+                )}
 
                 {/* Personal Details + Messages */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>

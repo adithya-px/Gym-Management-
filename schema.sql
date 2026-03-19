@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS gym_management;
 USE gym_management;
 
 -- Reset tables if they exist
+DROP TABLE IF EXISTS DIET_PLAN;
 DROP TABLE IF EXISTS MESSAGE;
 DROP TABLE IF EXISTS ATTENDANCE;
 DROP TABLE IF EXISTS EQUIPMENT;
@@ -122,4 +123,25 @@ CREATE TABLE MESSAGE (
         REFERENCES INSTRUCTOR(instructor_id),
     FOREIGN KEY (to_member_id)
         REFERENCES MEMBER(member_id)
+);
+
+-- DIET_PLAN TABLE
+CREATE TABLE DIET_PLAN (
+    diet_plan_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT,
+    instructor_id INT,
+    protein_g INT NOT NULL,
+    carbs_g INT NOT NULL,
+    kcal_goal INT NOT NULL,
+    breakfast TEXT,
+    lunch TEXT,
+    dinner TEXT,
+    snacks TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT NOW(),
+    updated_at DATETIME DEFAULT NOW() ON UPDATE NOW(),
+    FOREIGN KEY (member_id)
+        REFERENCES MEMBER(member_id),
+    FOREIGN KEY (instructor_id)
+        REFERENCES INSTRUCTOR(instructor_id)
 );

@@ -9,6 +9,7 @@ import {
     UserCheck,
     CreditCard,
     Dumbbell,
+    Apple,
     LogOut
 } from 'lucide-react';
 
@@ -63,6 +64,11 @@ const Sidebar = () => {
                 <NavLink to="/equipment" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Dumbbell className="nav-item-icon" />
                     Equipment
+                </NavLink>
+
+                <NavLink to="/diet-plans" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Apple className="nav-item-icon" />
+                    Diet Plans
                 </NavLink>
             </nav>
 

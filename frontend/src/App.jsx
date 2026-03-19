@@ -12,6 +12,7 @@ import PlansPage from './pages/PlansPage';
 import MemberPlansPage from './pages/MemberPlansPage';
 import PaymentsPage from './pages/PaymentsPage';
 import AttendancePage from './pages/AttendancePage';
+import DietPlansPage from './pages/DietPlansPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -67,6 +68,7 @@ function App() {
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="equipment" element={<EquipmentPage />} />
+            <Route path="diet-plans" element={<DietPlansPage />} />
           </Route>
 
           {/* Catch-all redirect */}

@@ -157,6 +157,10 @@ def get_dashboard_stats():
         cursor.execute("SELECT SUM(quantity) as count FROM EQUIPMENT")
         equipment_count = cursor.fetchone()['count'] or 0
 
+        # Active Diet Plans
+        cursor.execute("SELECT COUNT(*) as count FROM DIET_PLAN")
+        diet_plans_count = cursor.fetchone()['count']
+
         # Expiring Members (Next 7 Days)
         cursor.execute("""
             SELECT m.member_id as id, CONCAT(m.first_name, ' ', m.last_name) as name, 
@@ -181,6 +185,7 @@ def get_dashboard_stats():
             "todayAttendance": today_attendance,
             "monthlyRevenue": float(monthly_revenue),
             "equipmentCount": equipment_count,
+            "activeDietPlans": diet_plans_count,
             "expiringMembers": expiring_members
         }
         
@@ -331,6 +336,26 @@ def get_member_charts(member_id):
         att_labels = [row['month'] for row in attendance]
         att_data = [row['visits'] for row in attendance]
         
+        # 14-day Attendance blocks for this member
+        cursor.execute("""
+            SELECT visit_date as date, COUNT(*) as visits
+            FROM ATTENDANCE WHERE member_id = %s
+            AND visit_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            GROUP BY visit_date ORDER BY visit_date ASC
+        """, (member_id,))
+        recent_attendance = cursor.fetchall()
+        
+        from datetime import timedelta as td
+        from datetime import datetime
+        today_date = datetime.today().date()
+        block_labels = []
+        block_data = []
+        for i in range(13, -1, -1):
+            day = today_date - td(days=i)
+            block_labels.append(day.strftime('%a %d'))
+            match = next((row for row in recent_attendance if row['date'] == day), None)
+            block_data.append(1 if match else 0)
+
         # Payment details
         cursor.execute("""
             SELECT p.plan_name, pay.amount, pay.payment_date, pay.valid_from, pay.valid_until
@@ -345,6 +370,7 @@ def get_member_charts(member_id):
         
         return jsonify({
             "attendance": {"labels": att_labels, "data": att_data},
+            "attendance_blocks": {"labels": block_labels, "data": block_data},
             "payments": payments
         })
     except Error as e:
@@ -553,6 +579,7 @@ def delete_member(member_id):
     try:
         cursor = conn.cursor()
         # Delete related records first
+        cursor.execute("DELETE FROM DIET_PLAN WHERE member_id = %s", (member_id,))
         cursor.execute("DELETE FROM MESSAGE WHERE to_member_id = %s", (member_id,))
         cursor.execute("DELETE FROM ATTENDANCE WHERE member_id = %s", (member_id,))
         cursor.execute("DELETE FROM PAYMENT WHERE member_id = %s", (member_id,))
@@ -609,6 +636,7 @@ def delete_instructor(id):
     if not conn: return jsonify({"error": "DB error"}), 500
     try:
         c = conn.cursor()
+        c.execute("DELETE FROM DIET_PLAN WHERE instructor_id = %s", (id,))
         c.execute("DELETE FROM MESSAGE WHERE from_instructor_id = %s", (id,))
         c.execute("DELETE FROM ATTENDANCE WHERE instructor_id = %s", (id,))
         c.execute("DELETE FROM MEMBER_PLAN WHERE instructor_id = %s", (id,))
@@ -926,6 +954,150 @@ def delete_attendance(id):
         c.execute("DELETE FROM ATTENDANCE WHERE attendance_id = %s", (id,))
         conn.commit()
         return jsonify({"message": "Deleted"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+# ==========================================
+# DIET PLAN Endpoints
+# ==========================================
+
+@app.route('/api/diet-plans', methods=['GET'])
+def get_all_diet_plans():
+    """Admin: list all diet plans with member/instructor names"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT dp.*,
+                   CONCAT(m.first_name, ' ', m.last_name) as member_name,
+                   CONCAT(i.first_name, ' ', i.last_name) as instructor_name
+            FROM DIET_PLAN dp
+            JOIN MEMBER m ON dp.member_id = m.member_id
+            JOIN INSTRUCTOR i ON dp.instructor_id = i.instructor_id
+            ORDER BY dp.updated_at DESC
+        """)
+        result = c.fetchall()
+        for row in result:
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+            if row.get('updated_at'): row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/instructor/<int:instructor_id>/diet-plans', methods=['GET'])
+def get_instructor_diet_plans(instructor_id):
+    """Coach: get diet plans created by this instructor"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT dp.*,
+                   CONCAT(m.first_name, ' ', m.last_name) as member_name
+            FROM DIET_PLAN dp
+            JOIN MEMBER m ON dp.member_id = m.member_id
+            WHERE dp.instructor_id = %s
+        """, (instructor_id,))
+        result = c.fetchall()
+        for row in result:
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+            if row.get('updated_at'): row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/instructor/<int:instructor_id>/diet-plan', methods=['POST'])
+def create_diet_plan(instructor_id):
+    """Coach: create a diet plan for a member"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        protein_g = data.get('protein_g')
+        carbs_g = data.get('carbs_g')
+        kcal_goal = data.get('kcal_goal')
+        member_id = data.get('member_id')
+        if not all([protein_g, carbs_g, kcal_goal, member_id]):
+            return jsonify({"error": "protein_g, carbs_g, kcal_goal and member_id are required"}), 400
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO DIET_PLAN (member_id, instructor_id, protein_g, carbs_g, kcal_goal, breakfast, lunch, dinner, snacks, notes)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (member_id, instructor_id, protein_g, carbs_g, kcal_goal,
+             data.get('breakfast'), data.get('lunch'), data.get('dinner'),
+             data.get('snacks'), data.get('notes'))
+        )
+        conn.commit()
+        return jsonify({"message": "Diet plan created", "id": c.lastrowid}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/diet-plan/<int:id>', methods=['PUT'])
+def update_diet_plan(id):
+    """Coach: update a diet plan"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        protein_g = data.get('protein_g')
+        carbs_g = data.get('carbs_g')
+        kcal_goal = data.get('kcal_goal')
+        if not all([protein_g, carbs_g, kcal_goal]):
+            return jsonify({"error": "protein_g, carbs_g, and kcal_goal are required"}), 400
+        c = conn.cursor()
+        c.execute(
+            """UPDATE DIET_PLAN SET protein_g=%s, carbs_g=%s, kcal_goal=%s,
+               breakfast=%s, lunch=%s, dinner=%s, snacks=%s, notes=%s
+               WHERE diet_plan_id=%s""",
+            (protein_g, carbs_g, kcal_goal,
+             data.get('breakfast'), data.get('lunch'), data.get('dinner'),
+             data.get('snacks'), data.get('notes'), id)
+        )
+        conn.commit()
+        return jsonify({"message": "Diet plan updated"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/diet-plan/<int:id>', methods=['DELETE'])
+def delete_diet_plan(id):
+    """Coach: delete a diet plan"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("DELETE FROM DIET_PLAN WHERE diet_plan_id = %s", (id,))
+        conn.commit()
+        return jsonify({"message": "Diet plan deleted"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/member/<int:member_id>/diet-plan', methods=['GET'])
+def get_member_diet_plan(member_id):
+    """Member: get assigned diet plan"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT dp.*,
+                   CONCAT(i.first_name, ' ', i.last_name) as instructor_name
+            FROM DIET_PLAN dp
+            JOIN INSTRUCTOR i ON dp.instructor_id = i.instructor_id
+            WHERE dp.member_id = %s
+            ORDER BY dp.updated_at DESC LIMIT 1
+        """, (member_id,))
+        plan = c.fetchone()
+        if plan:
+            if plan.get('created_at'): plan['created_at'] = plan['created_at'].strftime('%Y-%m-%d %H:%M')
+            if plan.get('updated_at'): plan['updated_at'] = plan['updated_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(plan)
     except Error as e: return jsonify({"error": str(e)}), 500
     finally:
         if conn.is_connected(): c.close(); conn.close()

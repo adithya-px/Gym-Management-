@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NeonCard } from '../components/NeonCard';
-import { Users, Briefcase, Activity, DollarSign, Dumbbell, AlertTriangle, Loader } from 'lucide-react';
+import { Users, Briefcase, Activity, DollarSign, Dumbbell, AlertTriangle, Loader, Apple } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import { dashboardApi } from '../api';
 import '../chartSetup';
@@ -108,6 +108,11 @@ const Dashboard = () => {
                 <NeonCard
                     title={<><Briefcase size={18} /> Instructors</>}
                     value={stats.activeInstructors}
+                />
+                <NeonCard
+                    title={<><Apple size={18} /> Diet Plans</>}
+                    value={stats.activeDietPlans}
+                    accent="primary"
                 />
             </div>
 

@@ -115,6 +115,24 @@ def init_db():
             FOREIGN KEY (to_member_id) REFERENCES MEMBER(member_id)
         )""")
 
+        cursor.execute("""CREATE TABLE IF NOT EXISTS DIET_PLAN (
+            diet_plan_id INT AUTO_INCREMENT PRIMARY KEY,
+            member_id INT,
+            instructor_id INT,
+            protein_g INT NOT NULL,
+            carbs_g INT NOT NULL,
+            kcal_goal INT NOT NULL,
+            breakfast TEXT,
+            lunch TEXT,
+            dinner TEXT,
+            snacks TEXT,
+            notes TEXT,
+            created_at DATETIME DEFAULT NOW(),
+            updated_at DATETIME DEFAULT NOW() ON UPDATE NOW(),
+            FOREIGN KEY (member_id) REFERENCES MEMBER(member_id),
+            FOREIGN KEY (instructor_id) REFERENCES INSTRUCTOR(instructor_id)
+        )""")
+
         conn.commit()
         print("Tables ready!")
 
@@ -191,6 +209,12 @@ def init_db():
             ('Harvey, your cardio endurance is improving! Let\'s add HIIT intervals next week.', today - timedelta(days=2)))
         cursor.execute("INSERT INTO MESSAGE (from_instructor_id, to_member_id, content, sent_at) VALUES (2,3,%s,%s)",
             ('Donna, please renew your membership before it expires.', today))
+
+        # Diet Plans
+        cursor.execute("INSERT INTO DIET_PLAN (member_id, instructor_id, protein_g, carbs_g, kcal_goal, breakfast, lunch, dinner, snacks, notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (1, 1, 180, 250, 2800, '6 egg whites + oatmeal + banana', 'Grilled chicken breast + brown rice + broccoli', 'Salmon + sweet potato + mixed greens', 'Whey protein shake + almonds', 'Drink at least 3L water daily. Take creatine post-workout.'))
+        cursor.execute("INSERT INTO DIET_PLAN (member_id, instructor_id, protein_g, carbs_g, kcal_goal, breakfast, lunch, dinner, snacks, notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (2, 2, 140, 180, 2200, 'Greek yogurt + granola + berries', 'Turkey wrap + quinoa salad', 'Grilled fish + steamed veggies', 'Protein bar + green tea', 'Focus on high-protein, low-carb meals on rest days.'))
 
         conn.commit()
         print("Seed data inserted successfully!")
