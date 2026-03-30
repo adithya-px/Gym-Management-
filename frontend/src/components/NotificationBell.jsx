@@ -26,8 +26,7 @@ const NotificationBell = ({ userId, role }) => {
     useEffect(() => {
         if (userId && role) {
             fetchNotifications();
-            // Optional: set up polling here if needed
-            const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+            const interval = setInterval(fetchNotifications, 60000);
             return () => clearInterval(interval);
         }
     }, [userId, role]);
@@ -53,6 +52,17 @@ const NotificationBell = ({ userId, role }) => {
         }
     };
 
+    const resolveNotification = async (id, e) => {
+        e.stopPropagation();
+        try {
+            await axios.put(`${API}/notifications/${id}/resolve`);
+            setNotifications(notifications.map(n => n.notification_id === id ? { ...n, is_read: 1, resolved_at: 'now' } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error('Failed to resolve notification', err);
+        }
+    };
+
     const markAllAsRead = async () => {
         try {
             await axios.put(`${API}/notifications/read-all/${role}/${userId}`);
@@ -63,6 +73,8 @@ const NotificationBell = ({ userId, role }) => {
         }
     };
 
+    const isAlertType = (type) => ['billing_overdue', 'admin_overdue', 'equipment_maintenance', 'ticket_overdue', 'new_ticket'].includes(type);
+
     const toggleDropdown = () => {
         setIsOpen(!isOpen);
     };
@@ -72,35 +84,20 @@ const NotificationBell = ({ userId, role }) => {
             <div 
                 onClick={toggleDropdown}
                 style={{
-                    position: 'relative',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'background-color 0.2s',
-                    color: 'var(--text-secondary)'
+                    position: 'relative', cursor: 'pointer', padding: '8px',
+                    borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background-color 0.2s', color: 'var(--text-secondary)'
                 }}
             >
                 <Bell size={20} />
                 {unreadCount > 0 && (
                     <div style={{
-                        position: 'absolute',
-                        top: '-2px',
-                        right: '-2px',
-                        backgroundColor: 'var(--danger-red)',
-                        color: 'white',
-                        fontSize: '0.65rem',
-                        fontWeight: 'bold',
-                        height: '16px',
-                        minWidth: '16px',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0 4px',
+                        position: 'absolute', top: '-2px', right: '-2px',
+                        backgroundColor: 'var(--danger-red)', color: 'white',
+                        fontSize: '0.65rem', fontWeight: 'bold', height: '16px',
+                        minWidth: '16px', borderRadius: '8px', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', padding: '0 4px',
                         border: '2px solid var(--bg-primary)'
                     }}>
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -110,40 +107,23 @@ const NotificationBell = ({ userId, role }) => {
 
             {isOpen && (
                 <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: '0.5rem',
-                    width: '320px',
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                    zIndex: 1000,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
+                    position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem',
+                    width: '360px', backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)', borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 1000,
+                    overflow: 'hidden', display: 'flex', flexDirection: 'column'
                 }}>
                     <div style={{
-                        padding: '1rem',
-                        borderBottom: '1px solid var(--border-color)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
+                        padding: '1rem', borderBottom: '1px solid var(--border-color)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         backgroundColor: 'rgba(255,255,255,0.02)'
                     }}>
                         <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem' }}>Notifications</h4>
                         {unreadCount > 0 && (
-                            <button 
-                                onClick={markAllAsRead}
-                                style={{
-                                    background: 'none', border: 'none', 
-                                    color: 'var(--electric-blue)', fontSize: '0.8rem',
-                                    cursor: 'pointer', padding: 0, fontWeight: 600
-                                }}
-                            >
-                                Mark all as read
-                            </button>
+                            <button onClick={markAllAsRead} style={{
+                                background: 'none', border: 'none', color: 'var(--electric-blue)',
+                                fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 600
+                            }}>Mark all as read</button>
                         )}
                     </div>
 
@@ -161,42 +141,50 @@ const NotificationBell = ({ userId, role }) => {
                                         padding: '1rem',
                                         borderBottom: '1px solid rgba(255,255,255,0.05)',
                                         backgroundColor: notif.is_read ? 'transparent' : 'rgba(29, 158, 117, 0.05)',
-                                        display: 'flex',
-                                        gap: '1rem',
-                                        transition: 'background-color 0.2s'
+                                        display: 'flex', gap: '1rem', transition: 'background-color 0.2s'
                                     }}
                                 >
-                                    <div style={{ marginTop: '2px', color: notif.type.includes('overdue') ? 'var(--danger-red)' : 'var(--electric-blue)' }}>
+                                    <div style={{ marginTop: '2px', color: notif.type.includes('overdue') || notif.type.includes('ticket') ? 'var(--danger-red)' : notif.type.includes('maintenance') ? '#FFA502' : 'var(--electric-blue)' }}>
                                         <Info size={18} />
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                                             <div style={{ 
                                                 color: notif.is_read ? 'var(--text-secondary)' : 'var(--text-primary)',
-                                                fontWeight: notif.is_read ? 500 : 700,
-                                                fontSize: '0.9rem'
-                                            }}>
-                                                {notif.title}
-                                            </div>
+                                                fontWeight: notif.is_read ? 500 : 700, fontSize: '0.9rem'
+                                            }}>{notif.title}</div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: '8px' }}>
-                                                {notif.created_at.split(' ')[0]}
+                                                {notif.created_at?.split(' ')[0]}
                                             </div>
                                         </div>
-                                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.4, marginBottom: notif.is_read ? 0 : '8px' }}>
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.4, marginBottom: '8px' }}>
                                             {notif.message}
                                         </div>
-                                        {!notif.is_read && (
-                                            <button 
-                                                onClick={(e) => markAsRead(notif.notification_id, e)}
-                                                style={{
-                                                    background: 'transparent', border: 'none',
-                                                    color: '#1D9E75', fontSize: '0.8rem',
-                                                    cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600
-                                                }}
-                                            >
-                                                <Check size={14} /> Mark read
-                                            </button>
-                                        )}
+                                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                            {!notif.is_read && (
+                                                <button onClick={(e) => markAsRead(notif.notification_id, e)} style={{
+                                                    background: 'transparent', border: 'none', color: '#1D9E75',
+                                                    fontSize: '0.8rem', cursor: 'pointer', padding: 0,
+                                                    display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600
+                                                }}>
+                                                    <Check size={14} /> Mark read
+                                                </button>
+                                            )}
+                                            {isAlertType(notif.type) && !notif.resolved_at && (
+                                                <button onClick={(e) => resolveNotification(notif.notification_id, e)} style={{
+                                                    background: 'transparent', border: 'none', color: 'var(--neon-green)',
+                                                    fontSize: '0.8rem', cursor: 'pointer', padding: 0,
+                                                    display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600
+                                                }}>
+                                                    <Check size={14} /> Resolve
+                                                </button>
+                                            )}
+                                            {notif.resolved_at && (
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--neon-green)', fontWeight: 600 }}>
+                                                    ✓ Resolved
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))

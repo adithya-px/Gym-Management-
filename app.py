@@ -1302,6 +1302,144 @@ def delete_equipment(equipment_id):
     finally:
         if conn.is_connected(): cursor.close(); conn.close()
 
+# ==========================================
+# EQUIPMENT TICKET Endpoints
+# ==========================================
+# Repair ticket workflow: members/instructors report broken equipment,
+# admin reviews, assigns status (open -> in_progress -> resolved -> closed).
+# Delivery: in-app notifications only. No email/SMS.
+
+@app.route('/api/equipment/<int:equipment_id>/tickets', methods=['GET'])
+def get_equipment_tickets(equipment_id):
+    """Get all tickets for a specific piece of equipment"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT t.*, e.name as equipment_name
+            FROM EQUIPMENT_TICKET t
+            JOIN EQUIPMENT e ON t.equipment_id = e.equipment_id
+            WHERE t.equipment_id = %s
+            ORDER BY t.created_at DESC
+        """, (equipment_id,))
+        result = c.fetchall()
+        for row in result:
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+            if row.get('resolved_at'): row['resolved_at'] = row['resolved_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/equipment/<int:equipment_id>/tickets', methods=['POST'])
+def create_equipment_ticket(equipment_id):
+    """Any user can report a broken machine"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        description = data.get('description')
+        if not description:
+            return jsonify({"error": "Description is required"}), 400
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO EQUIPMENT_TICKET
+               (equipment_id, reported_by_id, reported_by_role, description, priority)
+               VALUES (%s,%s,%s,%s,%s)""",
+            (equipment_id, data.get('reported_by_id'), data.get('reported_by_role'),
+             description, data.get('priority', 'medium'))
+        )
+        ticket_id = c.lastrowid
+
+        # Also notify admin about the new ticket
+        c.execute("SELECT name FROM EQUIPMENT WHERE equipment_id = %s", (equipment_id,))
+        eq = c.fetchone()
+        eq_name = eq[0] if eq else f"Equipment #{equipment_id}"
+        c.execute(
+            """INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+               VALUES (1, 'admin', 'new_ticket', 'New Repair Ticket', %s)""",
+            (f'Ticket #{ticket_id} reported for "{eq_name}": {description[:100]}',)
+        )
+
+        conn.commit()
+        return jsonify({"message": "Ticket created", "id": ticket_id}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/equipment/tickets', methods=['GET'])
+def get_all_equipment_tickets():
+    """Admin: list all tickets with equipment names, filterable by status"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        status_filter = request.args.get('status')
+        query = """
+            SELECT t.*, e.name as equipment_name, e.category as equipment_category
+            FROM EQUIPMENT_TICKET t
+            JOIN EQUIPMENT e ON t.equipment_id = e.equipment_id
+        """
+        params = []
+        if status_filter:
+            query += " WHERE t.status = %s"
+            params.append(status_filter)
+        query += " ORDER BY FIELD(t.priority, 'high','medium','low'), t.created_at DESC"
+        c.execute(query, params)
+        result = c.fetchall()
+        for row in result:
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+            if row.get('resolved_at'): row['resolved_at'] = row['resolved_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/equipment/tickets/<int:ticket_id>', methods=['PUT'])
+def update_equipment_ticket(ticket_id):
+    """Admin: update ticket status with validated transitions and resolution notes"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        new_status = data.get('status')
+        resolution_notes = data.get('resolution_notes', '')
+
+        # Validate status transitions
+        valid_transitions = {
+            'open': ['in_progress', 'resolved', 'closed'],
+            'in_progress': ['resolved', 'closed'],
+            'resolved': ['closed'],
+            'closed': []
+        }
+
+        c = conn.cursor(dictionary=True)
+        c.execute("SELECT * FROM EQUIPMENT_TICKET WHERE ticket_id = %s", (ticket_id,))
+        ticket = c.fetchone()
+        if not ticket:
+            return jsonify({"error": "Ticket not found"}), 404
+
+        current_status = ticket['status']
+        if new_status and new_status not in valid_transitions.get(current_status, []):
+            return jsonify({"error": f"Cannot transition from '{current_status}' to '{new_status}'"}), 400
+
+        if new_status in ('resolved', 'closed') and not ticket.get('resolved_at'):
+            c.execute(
+                "UPDATE EQUIPMENT_TICKET SET status = %s, resolution_notes = %s, resolved_at = NOW() WHERE ticket_id = %s",
+                (new_status, resolution_notes, ticket_id)
+            )
+        else:
+            c.execute(
+                "UPDATE EQUIPMENT_TICKET SET status = %s, resolution_notes = %s WHERE ticket_id = %s",
+                (new_status, resolution_notes, ticket_id)
+            )
+        conn.commit()
+        return jsonify({"message": f"Ticket updated to '{new_status}'"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
 @app.route('/api/attendance', methods=['GET'])
 def get_all_attendance():
     conn = get_db_connection()
@@ -1647,6 +1785,7 @@ def get_notifications(role, user_id):
         result = c.fetchall()
         for row in result:
             if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+            if row.get('resolved_at'): row['resolved_at'] = row['resolved_at'].strftime('%Y-%m-%d %H:%M')
         return jsonify(result)
     except Error as e: return jsonify({"error": str(e)}), 500
     finally:
@@ -1689,6 +1828,20 @@ def mark_all_notifications_read(role, user_id):
         c.execute("UPDATE NOTIFICATION SET is_read = 1 WHERE recipient_role = %s AND recipient_id = %s", (role, user_id))
         conn.commit()
         return jsonify({"message": "All marked read"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/notifications/<int:notif_id>/resolve', methods=['PUT'])
+def resolve_notification(notif_id):
+    """Mark an alert as resolved (distinct from just 'read')"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE NOTIFICATION SET is_read = 1, resolved_at = NOW() WHERE notification_id = %s", (notif_id,))
+        conn.commit()
+        return jsonify({"message": "Alert resolved"})
     except Error as e: return jsonify({"error": str(e)}), 500
     finally:
         if conn.is_connected(): c.close(); conn.close()

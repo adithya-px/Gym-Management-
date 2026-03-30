@@ -5,6 +5,7 @@ USE gym_management;
 DROP TABLE IF EXISTS DIET_PLAN;
 DROP TABLE IF EXISTS MESSAGE;
 DROP TABLE IF EXISTS ATTENDANCE;
+DROP TABLE IF EXISTS EQUIPMENT_TICKET;
 DROP TABLE IF EXISTS EQUIPMENT;
 DROP TABLE IF EXISTS PAYMENT;
 DROP TABLE IF EXISTS MEMBER_PLAN;
@@ -99,6 +100,21 @@ CREATE TABLE EQUIPMENT (
     next_maintenance_date DATE
 );
 
+-- EQUIPMENT_TICKET TABLE (Repair Workflow)
+CREATE TABLE EQUIPMENT_TICKET (
+    ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_id INT,
+    reported_by_id INT,
+    reported_by_role ENUM('member','instructor','admin'),
+    description TEXT NOT NULL,
+    priority ENUM('low','medium','high') DEFAULT 'medium',
+    status ENUM('open','in_progress','resolved','closed') DEFAULT 'open',
+    resolution_notes TEXT,
+    created_at DATETIME DEFAULT NOW(),
+    resolved_at DATETIME,
+    FOREIGN KEY (equipment_id) REFERENCES EQUIPMENT(equipment_id)
+);
+
 -- ATTENDANCE TABLE
 CREATE TABLE ATTENDANCE (
     attendance_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -156,6 +172,7 @@ CREATE TABLE NOTIFICATION (
     title VARCHAR(200),
     message TEXT,
     is_read BOOLEAN DEFAULT FALSE,
+    resolved_at DATETIME,
     created_at DATETIME DEFAULT NOW()
 );
 
@@ -193,6 +210,15 @@ BEGIN
     FROM EQUIPMENT
     WHERE next_maintenance_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
     AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'equipment_maintenance' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%', name, '%'));
+
+    -- 4. Open repair tickets > 2 days (Admin)
+    INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+    SELECT 1, 'admin', 'ticket_overdue', 'Unresolved Repair Ticket',
+        CONCAT('Ticket #', t.ticket_id, ' for "', e.name, '" has been open since ', DATE(t.created_at), '.')
+    FROM EQUIPMENT_TICKET t
+    JOIN EQUIPMENT e ON t.equipment_id = e.equipment_id
+    WHERE t.status IN ('open','in_progress') AND t.created_at < DATE_SUB(NOW(), INTERVAL 2 DAY)
+    AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'ticket_overdue' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%Ticket #', t.ticket_id, '%'));
 END //
 
 DELIMITER ;

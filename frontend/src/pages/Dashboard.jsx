@@ -4,7 +4,10 @@ import { NeonCard } from '../components/NeonCard';
 import { Users, Briefcase, Activity, DollarSign, Dumbbell, AlertTriangle, Loader, Apple } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import { dashboardApi } from '../api';
+import axios from 'axios';
 import '../chartSetup';
+
+const API = 'http://localhost:5000/api';
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
@@ -14,6 +17,16 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
+                // Auto-trigger alert generation on admin dashboard load.
+                // This calls the generate_daily_alerts stored procedure which:
+                //   1. Checks for billing cycles expiring in 7 days -> notifies member
+                //   2. Checks for overdue payments -> notifies member + admin
+                //   3. Checks for equipment maintenance due within 3 days -> notifies admin
+                //   4. Checks for repair tickets open > 2 days -> notifies admin
+                // Delivery: in-app notifications only (no email/SMS).
+                // Idempotent: won't duplicate alerts already generated today.
+                await axios.post(`${API}/notifications/generate`).catch(() => {});
+
                 const statsData = await dashboardApi.getStats();
                 const chartsData = await dashboardApi.getCharts();
                 setStats(statsData);

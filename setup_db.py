@@ -109,6 +109,20 @@ def init_db():
             next_maintenance_date DATE
         )""")
 
+        cursor.execute("""CREATE TABLE IF NOT EXISTS EQUIPMENT_TICKET (
+            ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+            equipment_id INT,
+            reported_by_id INT,
+            reported_by_role ENUM('member','instructor','admin'),
+            description TEXT NOT NULL,
+            priority ENUM('low','medium','high') DEFAULT 'medium',
+            status ENUM('open','in_progress','resolved','closed') DEFAULT 'open',
+            resolution_notes TEXT,
+            created_at DATETIME DEFAULT NOW(),
+            resolved_at DATETIME,
+            FOREIGN KEY (equipment_id) REFERENCES EQUIPMENT(equipment_id)
+        )""")
+
         cursor.execute("""CREATE TABLE IF NOT EXISTS ATTENDANCE (
             attendance_id INT AUTO_INCREMENT PRIMARY KEY,
             member_id INT,
@@ -197,6 +211,7 @@ def init_db():
             title VARCHAR(200),
             message TEXT,
             is_read BOOLEAN DEFAULT FALSE,
+            resolved_at DATETIME,
             created_at DATETIME DEFAULT NOW()
         )""")
 
@@ -233,6 +248,15 @@ def init_db():
                 FROM EQUIPMENT
                 WHERE next_maintenance_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
                 AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'equipment_maintenance' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%', name, '%'));
+
+                -- 4. Open repair tickets (Admin) — alert if any ticket has been open > 2 days
+                INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+                SELECT 1, 'admin', 'ticket_overdue', 'Unresolved Repair Ticket',
+                    CONCAT('Ticket #', t.ticket_id, ' for "', e.name, '" has been open since ', DATE(t.created_at), '.')
+                FROM EQUIPMENT_TICKET t
+                JOIN EQUIPMENT e ON t.equipment_id = e.equipment_id
+                WHERE t.status IN ('open','in_progress') AND t.created_at < DATE_SUB(NOW(), INTERVAL 2 DAY)
+                AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'ticket_overdue' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%Ticket #', t.ticket_id, '%'));
             END;
         """)
 
@@ -339,6 +363,11 @@ def init_db():
         cursor.execute("INSERT INTO EQUIPMENT (name, category, quantity, condition_status, next_maintenance_date) VALUES ('Precor Elliptical','Cardio',3,'Needs Repair',%s)", (expiring_soon,))
         cursor.execute("INSERT INTO EQUIPMENT (name, category, quantity, condition_status, next_maintenance_date) VALUES ('Dumbbell Set 5-50lbs','Weights',2,'Excellent',%s)", (active,))
         cursor.execute("INSERT INTO EQUIPMENT (name, category, quantity, condition_status, next_maintenance_date) VALUES ('Squat Rack','Weights',4,'Good',%s)", (expiring_soon,))
+
+        # Equipment Repair Tickets
+        cursor.execute("INSERT INTO EQUIPMENT_TICKET (equipment_id, reported_by_id, reported_by_role, description, priority, status, created_at) VALUES (2, 1, 'member', 'Elliptical #2 makes a grinding noise at high resistance levels', 'high', 'open', %s)", (today - timedelta(days=3),))
+        cursor.execute("INSERT INTO EQUIPMENT_TICKET (equipment_id, reported_by_id, reported_by_role, description, priority, status, created_at) VALUES (1, 2, 'member', 'Treadmill belt is slipping during sprints', 'medium', 'in_progress', %s)", (today - timedelta(days=1),))
+        cursor.execute("INSERT INTO EQUIPMENT_TICKET (equipment_id, reported_by_id, reported_by_role, description, priority, status, resolution_notes, resolved_at, created_at) VALUES (4, 1, 'instructor', 'Squat rack safety pins are loose on unit #3', 'high', 'resolved', 'Tightened all safety pins and replaced worn bolts', %s, %s)", (today, today - timedelta(days=5),))
 
         # Attendance (7 days)
         for i in range(7):
