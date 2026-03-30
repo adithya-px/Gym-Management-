@@ -10,6 +10,7 @@ import {
     CreditCard,
     Dumbbell,
     Apple,
+    FileText,
     LogOut
 } from 'lucide-react';
 
@@ -56,9 +57,14 @@ const Sidebar = () => {
                     Attendance
                 </NavLink>
 
+                <NavLink to="/billing" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <FileText className="nav-item-icon" />
+                    Billing
+                </NavLink>
+
                 <NavLink to="/payments" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <CreditCard className="nav-item-icon" />
-                    Payments
+                    Payment Ledger
                 </NavLink>
 
                 <NavLink to="/equipment" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -69,6 +75,11 @@ const Sidebar = () => {
                 <NavLink to="/diet-plans" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Apple className="nav-item-icon" />
                     Diet Plans
+                </NavLink>
+
+                <NavLink to="/approvals" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <UserCheck className="nav-item-icon" />
+                    Approvals
                 </NavLink>
             </nav>
 

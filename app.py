@@ -76,6 +76,9 @@ def login():
         member = cursor.fetchone()
         
         if member:
+            if member.get('status') and member['status'] != 'active':
+                return jsonify({"error": f"Account is {member['status']}. Please wait for admin approval."}), 403
+                
             token = jwt.encode({
                 'user_id': member['member_id'],
                 'role': 'member',
@@ -98,6 +101,9 @@ def login():
         instructor = cursor.fetchone()
         
         if instructor:
+            if instructor.get('status') and instructor['status'] != 'active':
+                return jsonify({"error": f"Account is {instructor['status']}. Please wait for admin approval."}), 403
+                
             token = jwt.encode({
                 'user_id': instructor['instructor_id'],
                 'role': 'instructor',
@@ -124,6 +130,110 @@ def login():
         if conn.is_connected():
             cursor.close()
             conn.close()
+
+# ==========================================
+# REGISTRATION & ONBOARDING Endpoints
+# ==========================================
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.json
+    role = data.get('role')
+    email = data.get('email')
+    password = data.get('password')
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    phone = data.get('phone', '')
+
+    if not all([role, email, password, first_name, last_name]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        if role == 'member':
+            c.execute("INSERT INTO MEMBER (first_name, last_name, email, phone, password, status, join_date) VALUES (%s,%s,%s,%s,%s,'pending',CURDATE())",
+                      (first_name, last_name, email, phone, password))
+        elif role == 'instructor':
+            c.execute("INSERT INTO INSTRUCTOR (first_name, last_name, email, phone, password, status) VALUES (%s,%s,%s,%s,%s,'pending')",
+                      (first_name, last_name, email, phone, password))
+        else:
+            return jsonify({"error": "Invalid role"}), 400
+        conn.commit()
+        return jsonify({"message": "Registration successful, pending admin approval"}), 201
+    except Error as e:
+        if 'Duplicate' in str(e):
+            return jsonify({"error": "Email already exists"}), 409
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/auth/change-password', methods=['PUT'])
+def change_password():
+    data = request.json
+    user_id = data.get('user_id')
+    role = data.get('role')
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+
+    if not all([user_id, role, old_password, new_password]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        table = "ADMIN" if role == 'admin' else "MEMBER" if role == 'member' else "INSTRUCTOR"
+        id_col = f"{table.lower()}_id"
+        
+        c.execute(f"SELECT password FROM {table} WHERE {id_col} = %s", (user_id,))
+        user = c.fetchone()
+        
+        if not user or user['password'] != old_password:
+            return jsonify({"error": "Incorrect old password"}), 401
+
+        c.execute(f"UPDATE {table} SET password = %s WHERE {id_col} = %s", (new_password, user_id))
+        conn.commit()
+        return jsonify({"message": "Password updated successfully"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/admin/pending-users', methods=['GET'])
+def get_pending_users():
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("SELECT member_id as id, first_name, last_name, email, phone, 'member' as role, join_date as date_added FROM MEMBER WHERE status = 'pending'")
+        members = c.fetchall()
+        for m in members:
+            if m['date_added']: m['date_added'] = m['date_added'].strftime('%Y-%m-%d')
+            
+        c.execute("SELECT instructor_id as id, first_name, last_name, email, phone, 'instructor' as role, NULL as date_added FROM INSTRUCTOR WHERE status = 'pending'")
+        instructors = c.fetchall()
+        
+        return jsonify(members + instructors)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/admin/approve-user/<role>/<int:user_id>', methods=['PUT'])
+def approve_user(role, user_id):
+    data = request.json
+    status = data.get('status', 'active') 
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        table = "MEMBER" if role == 'member' else "INSTRUCTOR"
+        id_col = f"{table.lower()}_id"
+        c.execute(f"UPDATE {table} SET status = %s WHERE {id_col} = %s", (status, user_id))
+        conn.commit()
+        return jsonify({"message": f"User marked as {status}"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
 
 # ==========================================
 # DASHBOARD Endpoints
@@ -293,6 +403,16 @@ def get_member_stats(member_id):
         cursor.execute("SELECT COUNT(*) as total FROM ATTENDANCE WHERE member_id = %s", (member_id,))
         total_visits = cursor.fetchone()['total']
         
+        # This month visits
+        cursor.execute("SELECT COUNT(*) as total FROM ATTENDANCE WHERE member_id = %s AND MONTH(visit_date) = MONTH(CURDATE()) AND YEAR(visit_date) = YEAR(CURDATE())", (member_id,))
+        this_month_visits = cursor.fetchone()['total']
+
+        # Previous month visits
+        cursor.execute("SELECT COUNT(*) as total FROM ATTENDANCE WHERE member_id = %s AND MONTH(visit_date) = MONTH(CURDATE() - INTERVAL 1 MONTH) AND YEAR(visit_date) = YEAR(CURDATE() - INTERVAL 1 MONTH)", (member_id,))
+        prev_month_visits = cursor.fetchone()['total']
+
+        visits_delta = this_month_visits - prev_month_visits
+
         # Total paid
         cursor.execute("SELECT COALESCE(SUM(amount), 0) as total FROM PAYMENT WHERE member_id = %s", (member_id,))
         total_paid = float(cursor.fetchone()['total'])
@@ -309,7 +429,10 @@ def get_member_stats(member_id):
             "activePlan": plan,
             "totalVisits": total_visits,
             "totalPaid": total_paid,
-            "validUntil": valid_until
+            "validUntil": valid_until,
+            "thisMonthVisits": this_month_visits,
+            "prevMonthVisits": prev_month_visits,
+            "visitsDelta": visits_delta
         })
     except Error as e:
         return jsonify({"error": str(e)}), 500
@@ -325,36 +448,169 @@ def get_member_charts(member_id):
         return jsonify({"error": "Database error"}), 500
     try:
         cursor = conn.cursor(dictionary=True)
-        
-        # Monthly attendance for this member
-        cursor.execute("""
-            SELECT CONCAT(LEFT(MONTHNAME(visit_date), 3), ' ', YEAR(visit_date)) as month, YEAR(visit_date) as y, MONTH(visit_date) as m, COUNT(*) as visits 
-            FROM ATTENDANCE WHERE member_id = %s
-            GROUP BY month, y, m ORDER BY y ASC, m ASC
-        """, (member_id,))
-        attendance = cursor.fetchall()
-        att_labels = [row['month'] for row in attendance]
-        att_data = [row['visits'] for row in attendance]
-        
-        # 14-day Attendance blocks for this member
-        cursor.execute("""
-            SELECT visit_date as date, COUNT(*) as visits
-            FROM ATTENDANCE WHERE member_id = %s
-            AND visit_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-            GROUP BY visit_date ORDER BY visit_date ASC
-        """, (member_id,))
-        recent_attendance = cursor.fetchall()
-        
         from datetime import timedelta as td
         from datetime import datetime
         today_date = datetime.today().date()
-        block_labels = []
-        block_data = []
-        for i in range(13, -1, -1):
-            day = today_date - td(days=i)
-            block_labels.append(day.strftime('%a %d'))
-            match = next((row for row in recent_attendance if row['date'] == day), None)
-            block_data.append(1 if match else 0)
+
+        # --- 4-week attendance calendar ---
+        # We build a 4-week (28-day) grid aligned to Monday-Sunday rows
+        # Go back 27 days from today to get 28 days total
+        start_28 = today_date - td(days=27)
+        # Align to the Monday on or before start_28
+        start_monday = start_28 - td(days=start_28.weekday())  # weekday(): Mon=0
+        # End on the Sunday on or after today
+        end_sunday = today_date + td(days=(6 - today_date.weekday()) % 7)
+        total_days = (end_sunday - start_monday).days + 1
+
+        # Fetch attendance in range
+        cursor.execute("""
+            SELECT visit_date as date FROM ATTENDANCE
+            WHERE member_id = %s AND visit_date >= %s AND visit_date <= %s
+            GROUP BY visit_date
+        """, (member_id, start_monday.strftime('%Y-%m-%d'), end_sunday.strftime('%Y-%m-%d')))
+        attended_rows = cursor.fetchall()
+        attended_set = set()
+        for r in attended_rows:
+            if r['date']:
+                attended_set.add(r['date'] if isinstance(r['date'], str) else r['date'].strftime('%Y-%m-%d') if hasattr(r['date'], 'strftime') else str(r['date']))
+
+        weeks = []
+        day_cursor = start_monday
+        while day_cursor <= end_sunday:
+            week = []
+            for _ in range(7):
+                ds = day_cursor.strftime('%Y-%m-%d')
+                if day_cursor > today_date:
+                    status = 'out'
+                elif day_cursor < start_28:
+                    status = 'out'
+                elif day_cursor.weekday() == 6:  # Sunday = rest day
+                    status = 'rest'
+                elif ds in attended_set:
+                    status = 'present'
+                else:
+                    status = 'absent'
+                week.append({"date": ds, "status": status})
+                day_cursor += td(days=1)
+            weeks.append(week)
+
+        attendance_calendar = {"weeks": weeks}
+
+        # --- Attendance streak (current + best) ---
+        cursor.execute("""
+            SELECT DISTINCT visit_date as date FROM ATTENDANCE
+            WHERE member_id = %s ORDER BY visit_date DESC
+        """, (member_id,))
+        all_dates_rows = cursor.fetchall()
+        visited_dates = set()
+        for r in all_dates_rows:
+            d = r['date']
+            if hasattr(d, 'strftime'):
+                visited_dates.add(d)
+            else:
+                visited_dates.add(datetime.strptime(str(d), '%Y-%m-%d').date())
+
+        # Current streak: count consecutive days ending today (skip Sundays)
+        current_streak = 0
+        d = today_date
+        while True:
+            if d.weekday() == 6:  # skip Sunday
+                d -= td(days=1)
+                continue
+            if d in visited_dates:
+                current_streak += 1
+                d -= td(days=1)
+            else:
+                break
+
+        # Best streak: walk all sorted dates
+        sorted_dates = sorted(visited_dates)
+        best_streak = 0
+        streak = 0
+        prev = None
+        for d in sorted_dates:
+            if prev is None:
+                streak = 1
+            else:
+                gap = (d - prev).days
+                # Allow gap of 1 day (consecutive) or 2 days (skipping Sunday)
+                if gap == 1 or (gap == 2 and (prev + td(days=1)).weekday() == 6):
+                    streak += 1
+                else:
+                    streak = 1
+            best_streak = max(best_streak, streak)
+            prev = d
+
+        attendance_streak = {"current": current_streak, "best": best_streak}
+
+        # --- Month summary (present/absent/rest this month) ---
+        first_of_month = today_date.replace(day=1)
+        present_this_month = 0
+        absent_this_month = 0
+        rest_this_month = 0
+        d = first_of_month
+        while d <= today_date:
+            ds = d.strftime('%Y-%m-%d')
+            if d.weekday() == 6:
+                rest_this_month += 1
+            elif ds in {x.strftime('%Y-%m-%d') if hasattr(x, 'strftime') else str(x) for x in visited_dates}:
+                present_this_month += 1
+            else:
+                absent_this_month += 1
+            d += td(days=1)
+
+        attendance_month_summary = {
+            "present": present_this_month,
+            "absent": absent_this_month,
+            "rest": rest_this_month
+        }
+
+        # --- Stacked 6-month chart ---
+        import calendar
+        labels_6mo = []
+        present_6mo = []
+        absent_6mo = []
+        rest_6mo = []
+        for i in range(5, -1, -1):
+            # Go back i months
+            month = today_date.month - i
+            year = today_date.year
+            while month <= 0:
+                month += 12
+                year -= 1
+            month_name = calendar.month_abbr[month]
+            labels_6mo.append(f"{month_name}")
+            days_in_month = calendar.monthrange(year, month)[1]
+            # For current month, only count up to today
+            if year == today_date.year and month == today_date.month:
+                last_day = today_date.day
+            else:
+                last_day = days_in_month
+
+            p_count = 0
+            a_count = 0
+            r_count = 0
+            for day_num in range(1, last_day + 1):
+                try:
+                    check_date = datetime(year, month, day_num).date()
+                except ValueError:
+                    continue
+                if check_date.weekday() == 6:
+                    r_count += 1
+                elif check_date in visited_dates:
+                    p_count += 1
+                else:
+                    a_count += 1
+            present_6mo.append(p_count)
+            absent_6mo.append(a_count)
+            rest_6mo.append(r_count)
+
+        attendance_stacked_6mo = {
+            "labels": labels_6mo,
+            "present": present_6mo,
+            "absent": absent_6mo,
+            "rest": rest_6mo
+        }
 
         # Payment details
         cursor.execute("""
@@ -369,8 +625,10 @@ def get_member_charts(member_id):
             pay['valid_until'] = pay['valid_until'].strftime('%Y-%m-%d') if pay.get('valid_until') else None
         
         return jsonify({
-            "attendance": {"labels": att_labels, "data": att_data},
-            "attendance_blocks": {"labels": block_labels, "data": block_data},
+            "attendance_calendar": attendance_calendar,
+            "attendance_streak": attendance_streak,
+            "attendance_month_summary": attendance_month_summary,
+            "attendance_stacked_6mo": attendance_stacked_6mo,
             "payments": payments
         })
     except Error as e:
@@ -379,6 +637,7 @@ def get_member_charts(member_id):
         if conn.is_connected():
             cursor.close()
             conn.close()
+
 
 @app.route('/api/member/<int:member_id>/messages', methods=['GET'])
 def get_member_messages(member_id):
@@ -789,8 +1048,8 @@ def create_payment():
         data = request.json
         c = conn.cursor()
         c.execute(
-            "INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-            (data.get('member_id'), data.get('plan_id'), data.get('amount'), data.get('payment_date'), data.get('valid_from'), data.get('valid_until'), data.get('payment_mode'))
+            "INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode, invoice_number) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+            (data.get('member_id'), data.get('plan_id'), data.get('amount'), data.get('payment_date'), data.get('valid_from'), data.get('valid_until'), data.get('payment_mode'), data.get('invoice_number'))
         )
         conn.commit()
         return jsonify({"message": "Created", "id": c.lastrowid}), 201
@@ -806,8 +1065,8 @@ def update_payment(id):
         data = request.json
         c = conn.cursor()
         c.execute(
-            "UPDATE PAYMENT SET member_id=%s, plan_id=%s, amount=%s, payment_date=%s, valid_from=%s, valid_until=%s, payment_mode=%s WHERE payment_id=%s",
-            (data.get('member_id'), data.get('plan_id'), data.get('amount'), data.get('payment_date'), data.get('valid_from'), data.get('valid_until'), data.get('payment_mode'), id)
+            "UPDATE PAYMENT SET member_id=%s, plan_id=%s, amount=%s, payment_date=%s, valid_from=%s, valid_until=%s, payment_mode=%s, invoice_number=%s WHERE payment_id=%s",
+            (data.get('member_id'), data.get('plan_id'), data.get('amount'), data.get('payment_date'), data.get('valid_from'), data.get('valid_until'), data.get('payment_mode'), data.get('invoice_number'), id)
         )
         conn.commit()
         return jsonify({"message": "Updated"})
@@ -824,6 +1083,164 @@ def delete_payment(id):
         c.execute("DELETE FROM PAYMENT WHERE payment_id = %s", (id,))
         conn.commit()
         return jsonify({"message": "Deleted"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+# --- BILLING CYCLES ---
+
+@app.route('/api/billing-cycles', methods=['GET'])
+def get_all_billing_cycles():
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        query = """
+            SELECT b.*, 
+                   CONCAT(m.first_name, ' ', m.last_name) as member_name,
+                   p.plan_name
+            FROM BILLING_CYCLE b
+            JOIN MEMBER m ON b.member_id = m.member_id
+            JOIN PLAN p ON b.plan_id = p.plan_id
+            ORDER BY b.due_date DESC
+        """
+        c.execute(query)
+        result = c.fetchall()
+        for row in result:
+            if row.get('due_date'): row['due_date'] = row['due_date'].strftime('%Y-%m-%d')
+            if row.get('paid_date'): row['paid_date'] = row['paid_date'].strftime('%Y-%m-%d')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/billing-cycles/<int:member_id>', methods=['GET'])
+def get_member_billing_cycles(member_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        query = """
+            SELECT b.*, p.plan_name
+            FROM BILLING_CYCLE b
+            JOIN PLAN p ON b.plan_id = p.plan_id
+            WHERE b.member_id = %s
+            ORDER BY b.due_date DESC
+        """
+        c.execute(query, (member_id,))
+        result = c.fetchall()
+        for row in result:
+            if row.get('due_date'): row['due_date'] = row['due_date'].strftime('%Y-%m-%d')
+            if row.get('paid_date'): row['paid_date'] = row['paid_date'].strftime('%Y-%m-%d')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/billing-cycles', methods=['POST'])
+def create_billing_cycle():
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, amount, status) VALUES (%s,%s,%s,%s,%s)",
+            (data.get('member_id'), data.get('plan_id'), data.get('due_date'), data.get('amount'), data.get('status', 'pending'))
+        )
+        conn.commit()
+        return jsonify({"message": "Created", "id": c.lastrowid}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/billing-cycles/<int:id>/pay', methods=['PUT'])
+def pay_billing_cycle(id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        payment_mode = data.get('payment_mode', 'Credit Card')
+        c = conn.cursor(dictionary=True)
+        
+        # Get cycle details first
+        c.execute("SELECT * FROM BILLING_CYCLE WHERE cycle_id = %s", (id,))
+        cycle = c.fetchone()
+        if not cycle:
+            return jsonify({"error": "Not found"}), 404
+        
+        if cycle['status'] == 'paid':
+            return jsonify({"error": "Already paid"}), 400
+
+        # Mark cycle as paid
+        import datetime
+        today = datetime.date.today().strftime('%Y-%m-%d')
+        c.execute(
+            "UPDATE BILLING_CYCLE SET status = 'paid', paid_date = %s WHERE cycle_id = %s",
+            (today, id)
+        )
+        
+        # Generate Invoice Number
+        inv_year = datetime.date.today().year
+        c.execute("SELECT COUNT(*) as count FROM PAYMENT WHERE member_id = %s AND YEAR(payment_date) = %s", (cycle['member_id'], inv_year))
+        seq = c.fetchone()['count'] + 1
+        invoice_number = f"INV-{inv_year}-{cycle['member_id']}-{seq:03d}"
+        
+        # Calculate validity based on plan duration
+        c.execute("SELECT duration FROM PLAN WHERE plan_id = %s", (cycle['plan_id'],))
+        plan = c.fetchone()
+        duration_str = plan['duration'] if plan else '1 Month'
+        
+        num_val = int(duration_str.split(' ')[0])
+        unit = duration_str.split(' ')[-1].lower()
+        if 'month' in unit:
+            from dateutil.relativedelta import relativedelta
+            valid_until = datetime.date.today() + relativedelta(months=num_val)
+        elif 'day' in unit:
+            valid_until = datetime.date.today() + datetime.timedelta(days=num_val)
+        elif 'year' in unit:
+            from dateutil.relativedelta import relativedelta
+            valid_until = datetime.date.today() + relativedelta(years=num_val)
+        else:
+            from dateutil.relativedelta import relativedelta
+            valid_until = datetime.date.today() + relativedelta(months=1)
+
+        # Create Payment record
+        c.execute(
+            "INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode, invoice_number) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+            (cycle['member_id'], cycle['plan_id'], cycle['amount'], today, today, valid_until.strftime('%Y-%m-%d'), payment_mode, invoice_number)
+        )
+        
+        conn.commit()
+        return jsonify({"message": "Paid", "invoice_number": invoice_number})
+    except Error as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/billing-cycles/overdue', methods=['GET'])
+def get_overdue_cycles():
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        query = """
+            SELECT b.*, 
+                   CONCAT(m.first_name, ' ', m.last_name) as member_name,
+                   p.plan_name
+            FROM BILLING_CYCLE b
+            JOIN MEMBER m ON b.member_id = m.member_id
+            JOIN PLAN p ON b.plan_id = p.plan_id
+            WHERE b.status = 'pending' AND b.due_date < CURDATE()
+            ORDER BY b.due_date ASC
+        """
+        c.execute(query)
+        result = c.fetchall()
+        for row in result:
+            if row.get('due_date'): row['due_date'] = row['due_date'].strftime('%Y-%m-%d')
+            if row.get('paid_date'): row['paid_date'] = row['paid_date'].strftime('%Y-%m-%d')
+        return jsonify(result)
     except Error as e: return jsonify({"error": str(e)}), 500
     finally:
         if conn.is_connected(): c.close(); conn.close()
@@ -1102,6 +1519,194 @@ def get_member_diet_plan(member_id):
     finally:
         if conn.is_connected(): c.close(); conn.close()
 
+# --- WORKOUT LOGS ---
+
+@app.route('/api/exercises', methods=['GET'])
+def get_exercises():
+    return fetch_all("EXERCISE")
+
+@app.route('/api/workout-logs/<int:member_id>', methods=['GET'])
+def get_member_workout_logs(member_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        # Get logs
+        c.execute("""
+            SELECT l.* 
+            FROM WORKOUT_LOG l
+            WHERE l.member_id = %s
+            ORDER BY l.log_date DESC
+        """, (member_id,))
+        logs = c.fetchall()
+        
+        # Format dates and attach entries
+        for log in logs:
+            if log.get('log_date'): log['log_date'] = log['log_date'].strftime('%Y-%m-%d')
+            c.execute("""
+                SELECT e.*, ex.name as exercise_name, ex.muscle_group
+                FROM LOG_ENTRY e
+                JOIN EXERCISE ex ON e.exercise_id = ex.exercise_id
+                WHERE e.log_id = %s
+                ORDER BY e.entry_id ASC
+            """, (log['log_id'],))
+            log['entries'] = c.fetchall()
+            
+        return jsonify(logs)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/instructor/<int:instructor_id>/student/<int:member_id>/workout-logs', methods=['GET'])
+def get_student_workout_logs(instructor_id, member_id):
+    # Same as get_member_workout_logs
+    return get_member_workout_logs(member_id)
+
+@app.route('/api/workout-logs', methods=['POST'])
+def create_workout_log():
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO WORKOUT_LOG (member_id, log_date, title, notes) VALUES (%s,%s,%s,%s)",
+            (data.get('member_id'), data.get('log_date'), data.get('title'), data.get('notes'))
+        )
+        conn.commit()
+        return jsonify({"message": "Created", "id": c.lastrowid}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/workout-logs/<int:log_id>/entries', methods=['POST'])
+def add_workout_log_entry(log_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,%s,%s,%s,%s)",
+            (log_id, data.get('exercise_id'), data.get('set_no'), data.get('reps'), data.get('weight_kg'))
+        )
+        conn.commit()
+        return jsonify({"message": "Added", "id": c.lastrowid}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/workout-logs/<int:member_id>/personal-bests', methods=['GET'])
+def get_personal_bests(member_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("SELECT * FROM PERSONAL_BESTS WHERE member_id = %s", (member_id,))
+        return jsonify(c.fetchall())
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+        
+@app.route('/api/workout-logs/<int:member_id>/progress/<int:exercise_id>', methods=['GET'])
+def get_exercise_progress(member_id, exercise_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        query = """
+            SELECT w.log_date, MAX(l.weight_kg) as max_weight, MAX(l.reps) as max_reps
+            FROM LOG_ENTRY l
+            JOIN WORKOUT_LOG w ON l.log_id = w.log_id
+            WHERE w.member_id = %s AND l.exercise_id = %s
+            GROUP BY w.log_date
+            ORDER BY w.log_date ASC
+        """
+        c.execute(query, (member_id, exercise_id))
+        result = c.fetchall()
+        for row in result:
+            if row.get('log_date'): row['log_date'] = row['log_date'].strftime('%Y-%m-%d')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+# --- NOTIFICATIONS ---
+
+@app.route('/api/notifications/<string:role>/<int:user_id>', methods=['GET'])
+def get_notifications(role, user_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT * FROM NOTIFICATION 
+            WHERE recipient_role = %s AND recipient_id = %s
+            ORDER BY created_at DESC
+        """, (role, user_id))
+        result = c.fetchall()
+        for row in result:
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/notifications/<string:role>/<int:user_id>/unread-count', methods=['GET'])
+def get_unread_count(role, user_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT COUNT(*) as count FROM NOTIFICATION 
+            WHERE recipient_role = %s AND recipient_id = %s AND is_read = 0
+        """, (role, user_id))
+        return jsonify(c.fetchone())
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/notifications/<int:notif_id>/read', methods=['PUT'])
+def mark_notification_read(notif_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE NOTIFICATION SET is_read = 1 WHERE notification_id = %s", (notif_id,))
+        conn.commit()
+        return jsonify({"message": "Marked read"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/notifications/read-all/<string:role>/<int:user_id>', methods=['PUT'])
+def mark_all_notifications_read(role, user_id):
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE NOTIFICATION SET is_read = 1 WHERE recipient_role = %s AND recipient_id = %s", (role, user_id))
+        conn.commit()
+        return jsonify({"message": "All marked read"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/notifications/generate', methods=['POST'])
+def generate_alerts():
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.callproc('generate_daily_alerts')
+        conn.commit()
+        return jsonify({"message": "Stored procedure executed successfully"}), 200
+    except Error as e: 
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

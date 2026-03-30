@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
 import axios from 'axios';
@@ -107,7 +108,7 @@ const MemberPlansPage = () => {
             </div>
 
             {showForm && (
-                <div className="neon-card" style={{ marginBottom: '1.5rem' }}>
+                <GlowCard className="neon-card" style={{ marginBottom: '1.5rem' }} customSize={true}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit' }}>{editing ? 'Edit Assignment' : 'New Assignment'}</h3>
                         <button onClick={resetForm} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -115,32 +116,32 @@ const MemberPlansPage = () => {
                     <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.3rem' }}>Member</label>
-                            <select value={form.member_id} onChange={e => setForm({ ...form, member_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}>
+                            <select value={form.member_id} onChange={e => setForm({ ...form, member_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}>
                                 <option value="">Select Member...</option>
                                 {members.map(m => <option key={m.member_id} value={m.member_id}>{m.first_name} {m.last_name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.3rem' }}>Plan</label>
-                            <select value={form.plan_id} onChange={e => setForm({ ...form, plan_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}>
+                            <select value={form.plan_id} onChange={e => setForm({ ...form, plan_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}>
                                 <option value="">Select Plan...</option>
                                 {plans.map(p => <option key={p.plan_id} value={p.plan_id}>{p.plan_name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.3rem' }}>Instructor (Optional)</label>
-                            <select value={form.instructor_id} onChange={e => setForm({ ...form, instructor_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}>
+                            <select value={form.instructor_id} onChange={e => setForm({ ...form, instructor_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}>
                                 <option value="">No Instructor</option>
                                 {instructors.map(i => <option key={i.instructor_id} value={i.instructor_id}>{i.first_name} {i.last_name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.3rem' }}>Start Date</label>
-                            <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }} />
+                            <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }} />
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.3rem' }}>End Date</label>
-                            <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }} />
+                            <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }} />
                         </div>
                         <div style={{ gridColumn: 'span 2', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                             <button type="button" onClick={resetForm} style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', borderRadius: '0.4rem', cursor: 'pointer' }}>Cancel</button>
@@ -149,10 +150,10 @@ const MemberPlansPage = () => {
                             </button>
                         </div>
                     </form>
-                </div>
+                </GlowCard>
             )}
 
-            <div className="neon-card" style={{ padding: 0, overflow: 'auto' }}>
+            <GlowCard className="neon-card" style={{ padding: 0, overflow: 'auto' }} customSize={true}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -192,7 +193,7 @@ const MemberPlansPage = () => {
                         ))}
                     </tbody>
                 </table>
-            </div>
+            </GlowCard>
         </div>
     );
 };

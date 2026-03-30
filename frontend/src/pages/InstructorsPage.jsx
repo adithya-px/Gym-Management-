@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
 import axios from 'axios';
@@ -79,7 +80,7 @@ const InstructorsPage = () => {
 
             {/* Add/Edit Form */}
             {showForm && (
-                <div className="neon-card" style={{ marginBottom: '1.5rem' }}>
+                <GlowCard className="neon-card" style={{ marginBottom: '1.5rem' }} customSize={true}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit' }}>{editing ? 'Edit Instructor' : 'New Instructor'}</h3>
                         <button onClick={resetForm} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -108,11 +109,11 @@ const InstructorsPage = () => {
                             </button>
                         </div>
                     </form>
-                </div>
+                </GlowCard>
             )}
 
             {/* Data Table */}
-            <div className="neon-card" style={{ padding: 0, overflow: 'auto' }}>
+            <GlowCard className="neon-card" style={{ padding: 0, overflow: 'auto' }} customSize={true}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -145,7 +146,7 @@ const InstructorsPage = () => {
                         ))}
                     </tbody>
                 </table>
-            </div>
+            </GlowCard>
         </div>
     );
 };

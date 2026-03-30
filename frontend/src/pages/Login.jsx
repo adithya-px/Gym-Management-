@@ -1,6 +1,7 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Activity, Lock, User, AlertCircle } from 'lucide-react';
 import { authApi } from '../api';
 
@@ -43,12 +44,12 @@ const Login = () => {
             backgroundColor: 'var(--bg-dark)',
             padding: '1rem'
         }}>
-            <div className="neon-card" style={{
+            <GlowCard className="neon-card" style={{
                 maxWidth: '400px',
                 width: '100%',
                 padding: '2.5rem',
                 textAlign: 'center'
-            }}>
+            }} customSize={true}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--neon-green)' }}>
                     <Activity size={48} />
                 </div>
@@ -86,7 +87,7 @@ const Login = () => {
                             style={{
                                 width: '100%',
                                 padding: '0.75rem 1rem 0.75rem 2.8rem',
-                                backgroundColor: 'rgba(11, 12, 16, 0.5)',
+                                backgroundColor: 'var(--bg-primary)',
                                 border: '1px solid var(--border-color)',
                                 borderRadius: '0.5rem',
                                 color: 'var(--text-primary)',
@@ -109,7 +110,7 @@ const Login = () => {
                             style={{
                                 width: '100%',
                                 padding: '0.75rem 1rem 0.75rem 2.8rem',
-                                backgroundColor: 'rgba(11, 12, 16, 0.5)',
+                                backgroundColor: 'var(--bg-primary)',
                                 border: '1px solid var(--border-color)',
                                 borderRadius: '0.5rem',
                                 color: 'var(--text-primary)',
@@ -141,25 +142,29 @@ const Login = () => {
                         }}
                         onMouseEnter={(e) => {
                             if (!loading) {
-                                e.target.style.backgroundColor = 'rgba(69, 162, 158, 0.1)';
-                                e.target.style.boxShadow = '0 0 10px rgba(69, 162, 158, 0.4)';
+                                e.target.style.backgroundColor = 'var(--bg-primary)';
+                                e.target.style.color = 'var(--electric-blue)';
                             }
                         }}
                         onMouseLeave={(e) => {
-                            e.target.style.backgroundColor = 'transparent';
-                            e.target.style.boxShadow = 'none';
+                            e.target.style.backgroundColor = 'var(--electric-blue)';
+                            e.target.style.color = 'var(--bg-primary)';
                         }}
                     >
                         {loading ? 'Authenticating...' : 'Sign In'}
                     </button>
                 </form>
 
+                <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    Don't have an account? <Link to="/register" style={{ color: 'var(--electric-blue)', textDecoration: 'none', fontWeight: '500' }}>Sign Up here</Link>
+                </div>
+
                 <div style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                     <p style={{ marginBottom: '0.25rem' }}>Demo Admin: admin / admin123</p>
                     <p style={{ marginBottom: '0.25rem' }}>Demo Member: mike@test.com / password123</p>
                     <p>Demo Coach: john@neoniron.com / coach123</p>
                 </div>
-            </div>
+            </GlowCard>
         </div>
     );
 };

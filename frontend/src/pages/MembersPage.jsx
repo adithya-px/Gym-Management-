@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
 import axios from 'axios';
@@ -80,7 +81,7 @@ const MembersPage = () => {
 
             {/* Add/Edit Form */}
             {showForm && (
-                <div className="neon-card" style={{ marginBottom: '1.5rem' }}>
+                <GlowCard className="neon-card" style={{ marginBottom: '1.5rem' }} customSize={true}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit' }}>{editing ? 'Edit Member' : 'New Member'}</h3>
                         <button onClick={resetForm} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -99,7 +100,7 @@ const MembersPage = () => {
                                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'block', marginBottom: '0.3rem' }}>{f.label}</label>
                                 <input type={f.type} value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                                     required={f.key === 'first_name' || f.key === 'email'}
-                                    style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}
+                                    style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)', outline: 'none' }}
                                 />
                             </div>
                         ))}
@@ -110,11 +111,11 @@ const MembersPage = () => {
                             </button>
                         </div>
                     </form>
-                </div>
+                </GlowCard>
             )}
 
             {/* Data Table */}
-            <div className="neon-card" style={{ padding: 0, overflow: 'auto' }}>
+            <GlowCard className="neon-card" style={{ padding: 0, overflow: 'auto' }} customSize={true}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -147,7 +148,7 @@ const MembersPage = () => {
                         ))}
                     </tbody>
                 </table>
-            </div>
+            </GlowCard>
         </div>
     );
 };

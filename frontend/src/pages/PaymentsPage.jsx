@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Plus, Edit2, Trash2, X, Save, TrendingUp } from 'lucide-react';
 import axios from 'axios';
@@ -126,7 +127,7 @@ const PaymentsPage = () => {
 
             {/* Monthly Revenue Chart */}
             {sortedMonths.length > 0 && (
-                <div className="neon-card fade-in" style={{ marginBottom: '2rem' }}>
+                <GlowCard className="neon-card fade-in" style={{ marginBottom: '2rem' }} customSize={true}>
                     <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <TrendingUp size={20} /> Monthly Revenue Trend
                     </h3>
@@ -146,11 +147,11 @@ const PaymentsPage = () => {
                             }}
                         />
                     </div>
-                </div>
+                </GlowCard>
             )}
 
             {showForm && (
-                <div className="neon-card" style={{ marginBottom: '1.5rem', border: '1px solid var(--electric-blue)' }}>
+                <GlowCard className="neon-card" style={{ marginBottom: '1.5rem', border: '1px solid var(--electric-blue)' }} customSize={true}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit' }}>{editing ? 'Edit Payment' : 'New Payment'}</h3>
                         <button onClick={resetForm} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -158,40 +159,40 @@ const PaymentsPage = () => {
                     <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Member</label>
-                            <select value={form.member_id} onChange={e => setForm({ ...form, member_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }}>
+                            <select value={form.member_id} onChange={e => setForm({ ...form, member_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }}>
                                 <option value="">Select Member...</option>
                                 {members.map(m => <option key={m.member_id} value={m.member_id}>{m.first_name} {m.last_name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Plan</label>
-                            <select value={form.plan_id} onChange={e => setForm({ ...form, plan_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }}>
+                            <select value={form.plan_id} onChange={e => setForm({ ...form, plan_id: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }}>
                                 <option value="">Select Plan...</option>
                                 {plans.map(p => <option key={p.plan_id} value={p.plan_id}>{p.plan_name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Amount ($)</label>
-                            <input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
+                            <input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Payment Mode</label>
-                            <select value={form.payment_mode} onChange={e => setForm({ ...form, payment_mode: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }}>
+                            <select value={form.payment_mode} onChange={e => setForm({ ...form, payment_mode: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }}>
                                 <option>Credit Card</option><option>Cash</option><option>Bank Transfer</option>
                             </select>
                         </div>
                         <div>
                             <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Payment Date</label>
-                            <input type="date" value={form.payment_date} onChange={e => setForm({ ...form, payment_date: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
+                            <input type="date" value={form.payment_date} onChange={e => setForm({ ...form, payment_date: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <div>
                                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Valid From</label>
-                                <input type="date" value={form.valid_from} onChange={e => setForm({ ...form, valid_from: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
+                                <input type="date" value={form.valid_from} onChange={e => setForm({ ...form, valid_from: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
                             </div>
                             <div>
                                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Valid Until</label>
-                                <input type="date" value={form.valid_until} onChange={e => setForm({ ...form, valid_until: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'rgba(11,12,16,0.5)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
+                                <input type="date" value={form.valid_until} onChange={e => setForm({ ...form, valid_until: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
                             </div>
                         </div>
                         <div style={{ gridColumn: 'span 2', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
@@ -199,10 +200,10 @@ const PaymentsPage = () => {
                             <button type="submit" style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--electric-blue)', color: 'var(--electric-blue)', borderRadius: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Save size={16} /> Save</button>
                         </div>
                     </form>
-                </div>
+                </GlowCard>
             )}
 
-            <div className="neon-card" style={{ padding: 0, overflow: 'auto' }}>
+            <GlowCard className="neon-card" style={{ padding: 0, overflow: 'auto' }} customSize={true}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -236,7 +237,7 @@ const PaymentsPage = () => {
                         ))}
                     </tbody>
                 </table>
-            </div>
+            </GlowCard>
         </div>
     );
 };

@@ -1,7 +1,8 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NeonCard } from '../components/NeonCard';
-import { Activity, LogOut, Users, Send, MessageCircle, BarChart3, Apple, Save, Trash2 } from 'lucide-react';
+import { Activity, LogOut, Users, Send, MessageCircle, BarChart3, Apple, Save, Trash2, Edit2 } from 'lucide-react';
 import axios from 'axios';
 
 const API = 'http://localhost:5000/api';
@@ -23,6 +24,7 @@ const InstructorDashboard = () => {
     });
     const [dietSaving, setDietSaving] = useState(false);
     const [dietMsg, setDietMsg] = useState(null);
+    const [isEditingDiet, setIsEditingDiet] = useState(false);
 
     useEffect(() => {
         const fetchStudents = async () => {
@@ -73,8 +75,10 @@ const InstructorDashboard = () => {
                     snacks: plan.snacks || '',
                     notes: plan.notes || ''
                 });
+                setIsEditingDiet(false);
             } else {
                 setDietForm({ protein_g: '', carbs_g: '', kcal_goal: '', breakfast: '', lunch: '', dinner: '', snacks: '', notes: '' });
+                setIsEditingDiet(true);
             }
         } catch (err) {
             console.error('Failed to fetch diet plan', err);
@@ -101,6 +105,7 @@ const InstructorDashboard = () => {
             }
             setDietMsg({ type: 'success', text: dietPlan ? 'Diet plan updated!' : 'Diet plan created!' });
             fetchDietPlan(selectedStudent.member_id);
+            setIsEditingDiet(false);
             setTimeout(() => setDietMsg(null), 3000);
         } catch (err) {
             setDietMsg({ type: 'error', text: 'Failed to save diet plan.' });
@@ -150,13 +155,14 @@ const InstructorDashboard = () => {
         );
     }
 
-    const inputStyle = {
+    const getInputStyle = (isEditable) => ({
         width: '100%', padding: '0.6rem 0.75rem',
-        backgroundColor: 'rgba(11, 12, 16, 0.5)',
-        border: '1px solid var(--border-color)',
+        backgroundColor: isEditable ? 'var(--bg-primary)' : 'transparent',
+        border: `1px solid ${isEditable ? 'var(--border-color)' : 'transparent'}`,
         borderRadius: '0.4rem', color: 'var(--text-primary)',
-        outline: 'none', fontFamily: 'inherit', fontSize: '0.9rem'
-    };
+        outline: 'none', fontFamily: 'inherit', fontSize: '0.9rem',
+        transition: 'all 0.2s', opacity: isEditable ? 1 : 0.8
+    });
 
     const labelStyle = { color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem', fontWeight: '600' };
 
@@ -164,8 +170,7 @@ const InstructorDashboard = () => {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-dark)' }}>
             {/* Top Navbar */}
             <header style={{
-                backgroundColor: 'rgba(11, 12, 16, 0.8)',
-                backdropFilter: 'blur(10px)',
+                backgroundColor: 'var(--bg-secondary)',
                 borderBottom: '1px solid var(--border-color)',
                 padding: '1rem 2rem',
                 display: 'flex',
@@ -198,7 +203,7 @@ const InstructorDashboard = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.5rem', minHeight: '60vh' }}>
                     {/* Left: Student List */}
-                    <div className="neon-card" style={{ padding: '0', overflow: 'hidden' }}>
+                    <GlowCard className="neon-card" style={{ padding: '0', overflow: 'hidden' }} customSize={true}>
                         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
                             <h3 style={{ color: 'var(--text-primary)', margin: 0, fontFamily: 'Outfit', fontSize: '1rem' }}>Assigned Members</h3>
                         </div>
@@ -222,7 +227,7 @@ const InstructorDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </GlowCard>
 
                     {/* Right: Student Details */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -255,7 +260,7 @@ const InstructorDashboard = () => {
 
                                 {/* Attendance Blocks */}
                                 {studentAttendance && (
-                                    <div className="neon-card">
+                                    <GlowCard className="neon-card" customSize={true}>
                                         <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontFamily: 'Outfit' }}>
                                             {selectedStudent.first_name}'s Attendance (Last 14 Days)
                                         </h3>
@@ -274,8 +279,7 @@ const InstructorDashboard = () => {
                                                                 borderRadius: '4px',
                                                                 backgroundColor: isPresent ? 'var(--neon-green)' : 'rgba(255,255,255,0.05)',
                                                                 border: isPresent ? '1px solid var(--neon-green)' : '1px solid rgba(255,255,255,0.1)',
-                                                                boxShadow: isPresent ? '0 0 8px rgba(102, 252, 241, 0.4)' : 'none',
-                                                                transition: 'all 0.2s',
+                                                                transition: 'all 0.3s ease',
                                                                 cursor: 'pointer'
                                                             }}
                                                         ></div>
@@ -288,30 +292,40 @@ const InstructorDashboard = () => {
                                         </div>
                                         <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: 'var(--neon-green)', boxShadow: '0 0 8px rgba(102, 252, 241, 0.4)' }}></div> Present
+                                                <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: 'var(--neon-green)' }}></div> Present
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}></div> Absent
                                             </div>
                                         </div>
-                                    </div>
+                                    </GlowCard>
                                 )}
 
                                 {/* Diet Plan Editor */}
-                                <div className="neon-card">
+                                <GlowCard className="neon-card" customSize={true}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                         <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                                             <Apple size={20} color="var(--neon-green)" /> Diet Plan for {selectedStudent.first_name}
                                         </h3>
                                         {dietPlan && (
-                                            <button onClick={handleDeleteDiet} style={{
-                                                background: 'none', border: '1px solid var(--danger-red)',
-                                                color: 'var(--danger-red)', padding: '0.3rem 0.7rem',
-                                                borderRadius: '0.3rem', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem'
-                                            }}>
-                                                <Trash2 size={14} /> Delete
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button onClick={() => setIsEditingDiet(!isEditingDiet)} style={{
+                                                    background: 'none', border: '1px solid var(--electric-blue)',
+                                                    color: 'var(--electric-blue)', padding: '0.3rem 0.7rem',
+                                                    borderRadius: '0.3rem', cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem'
+                                                }}>
+                                                    <Edit2 size={14} /> {isEditingDiet ? 'Cancel' : 'Edit'}
+                                                </button>
+                                                <button onClick={handleDeleteDiet} style={{
+                                                    background: 'none', border: '1px solid var(--danger-red)',
+                                                    color: 'var(--danger-red)', padding: '0.3rem 0.7rem',
+                                                    borderRadius: '0.3rem', cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem'
+                                                }}>
+                                                    <Trash2 size={14} /> Delete
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
 
@@ -320,17 +334,17 @@ const InstructorDashboard = () => {
                                         <div>
                                             <label style={labelStyle}>Protein (g) *</label>
                                             <input type="number" value={dietForm.protein_g} onChange={e => setDietForm({ ...dietForm, protein_g: e.target.value })}
-                                                placeholder="e.g. 180" style={{ ...inputStyle, borderColor: 'var(--neon-green)' }} />
+                                                placeholder={isEditingDiet ? "e.g. 180" : "—"} disabled={!isEditingDiet} style={{ ...getInputStyle(isEditingDiet), borderColor: isEditingDiet ? 'var(--neon-green)' : 'transparent' }} />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Carbs (g) *</label>
                                             <input type="number" value={dietForm.carbs_g} onChange={e => setDietForm({ ...dietForm, carbs_g: e.target.value })}
-                                                placeholder="e.g. 250" style={{ ...inputStyle, borderColor: 'var(--electric-purple)' }} />
+                                                placeholder={isEditingDiet ? "e.g. 250" : "—"} disabled={!isEditingDiet} style={{ ...getInputStyle(isEditingDiet), borderColor: isEditingDiet ? 'var(--electric-purple)' : 'transparent' }} />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Kcal Goal *</label>
                                             <input type="number" value={dietForm.kcal_goal} onChange={e => setDietForm({ ...dietForm, kcal_goal: e.target.value })}
-                                                placeholder="e.g. 2800" style={{ ...inputStyle, borderColor: '#FF6B6B' }} />
+                                                placeholder={isEditingDiet ? "e.g. 2800" : "—"} disabled={!isEditingDiet} style={{ ...getInputStyle(isEditingDiet), borderColor: isEditingDiet ? '#FF6B6B' : 'transparent' }} />
                                         </div>
                                     </div>
 
@@ -339,53 +353,55 @@ const InstructorDashboard = () => {
                                         <div>
                                             <label style={labelStyle}>Breakfast</label>
                                             <input type="text" value={dietForm.breakfast} onChange={e => setDietForm({ ...dietForm, breakfast: e.target.value })}
-                                                placeholder="Optional" style={inputStyle} />
+                                                placeholder={isEditingDiet ? "Optional" : "—"} disabled={!isEditingDiet} style={getInputStyle(isEditingDiet)} />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Lunch</label>
                                             <input type="text" value={dietForm.lunch} onChange={e => setDietForm({ ...dietForm, lunch: e.target.value })}
-                                                placeholder="Optional" style={inputStyle} />
+                                                placeholder={isEditingDiet ? "Optional" : "—"} disabled={!isEditingDiet} style={getInputStyle(isEditingDiet)} />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Dinner</label>
                                             <input type="text" value={dietForm.dinner} onChange={e => setDietForm({ ...dietForm, dinner: e.target.value })}
-                                                placeholder="Optional" style={inputStyle} />
+                                                placeholder={isEditingDiet ? "Optional" : "—"} disabled={!isEditingDiet} style={getInputStyle(isEditingDiet)} />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Snacks</label>
                                             <input type="text" value={dietForm.snacks} onChange={e => setDietForm({ ...dietForm, snacks: e.target.value })}
-                                                placeholder="Optional" style={inputStyle} />
+                                                placeholder={isEditingDiet ? "Optional" : "—"} disabled={!isEditingDiet} style={getInputStyle(isEditingDiet)} />
                                         </div>
                                     </div>
 
                                     <div style={{ marginBottom: '1rem' }}>
                                         <label style={labelStyle}>Notes</label>
                                         <textarea value={dietForm.notes} onChange={e => setDietForm({ ...dietForm, notes: e.target.value })}
-                                            placeholder="Any additional notes for the member..." rows={2}
-                                            style={{ ...inputStyle, resize: 'vertical' }} />
+                                            placeholder={isEditingDiet ? "Any additional notes for the member..." : "—"} disabled={!isEditingDiet} rows={2}
+                                            style={{ ...getInputStyle(isEditingDiet), resize: 'vertical' }} />
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <button onClick={handleSaveDiet} disabled={dietSaving} style={{
-                                            padding: '0.6rem 1.5rem', background: 'transparent',
-                                            border: '1px solid var(--neon-green)', color: 'var(--neon-green)',
-                                            borderRadius: '0.4rem', cursor: dietSaving ? 'not-allowed' : 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                            fontWeight: '600', transition: 'all 0.3s'
-                                        }}>
-                                            <Save size={16} /> {dietSaving ? 'Saving...' : dietPlan ? 'Update Diet Plan' : 'Create Diet Plan'}
-                                        </button>
-                                        {dietMsg && (
-                                            <span style={{
-                                                fontSize: '0.85rem',
-                                                color: dietMsg.type === 'success' ? 'var(--neon-green)' : 'var(--danger-red)'
-                                            }}>{dietMsg.text}</span>
-                                        )}
-                                    </div>
-                                </div>
+                                    {isEditingDiet && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <button onClick={handleSaveDiet} disabled={dietSaving} style={{
+                                                padding: '0.6rem 1.5rem', background: 'transparent',
+                                                border: '1px solid var(--neon-green)', color: 'var(--neon-green)',
+                                                borderRadius: '0.4rem', cursor: dietSaving ? 'not-allowed' : 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                                fontWeight: '600', transition: 'all 0.3s'
+                                            }}>
+                                                <Save size={16} /> {dietSaving ? 'Saving...' : dietPlan ? 'Update Diet Plan' : 'Create Diet Plan'}
+                                            </button>
+                                            {dietMsg && (
+                                                <span style={{
+                                                    fontSize: '0.85rem',
+                                                    color: dietMsg.type === 'success' ? 'var(--neon-green)' : 'var(--danger-red)'
+                                                }}>{dietMsg.text}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </GlowCard>
 
                                 {/* Send Message */}
-                                <div className="neon-card">
+                                <GlowCard className="neon-card" customSize={true}>
                                     <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <MessageCircle size={20} color="var(--electric-blue)" /> Send Message to {selectedStudent.first_name}
                                     </h3>
@@ -399,7 +415,7 @@ const InstructorDashboard = () => {
                                             style={{
                                                 flex: 1,
                                                 padding: '0.75rem 1rem',
-                                                backgroundColor: 'rgba(11, 12, 16, 0.5)',
+                                                backgroundColor: 'var(--bg-primary)',
                                                 border: '1px solid var(--border-color)',
                                                 borderRadius: '0.5rem',
                                                 color: 'var(--text-primary)',
@@ -429,12 +445,12 @@ const InstructorDashboard = () => {
                                     {msgStatus === 'error' && (
                                         <p style={{ color: 'var(--danger-red)', marginTop: '0.5rem', fontSize: '0.85rem' }}>Failed to send message.</p>
                                     )}
-                                </div>
+                                </GlowCard>
                             </>
                         ) : (
-                            <div className="neon-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                            <GlowCard className="neon-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }} customSize={true}>
                                 <p style={{ color: 'var(--text-muted)' }}>Select a student to view their progress</p>
-                            </div>
+                            </GlowCard>
                         )}
                     </div>
                 </div>

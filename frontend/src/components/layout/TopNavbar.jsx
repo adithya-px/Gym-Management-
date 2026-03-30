@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import NotificationBell from '../NotificationBell';
 
 const TopNavbar = () => {
     const location = useLocation();
@@ -22,20 +22,7 @@ const TopNavbar = () => {
             <div className="page-title">{getPageTitle()}</div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ position: 'relative', cursor: 'pointer' }}>
-                    <Bell color="var(--text-secondary)" size={20} />
-                    <span style={{
-                        position: 'absolute',
-                        top: '-5px',
-                        right: '-5px',
-                        width: '10px',
-                        height: '10px',
-                        backgroundColor: 'var(--danger-red)',
-                        borderRadius: '50%',
-                        boxShadow: '0 0 10px var(--danger-red-glow)'
-                    }}></span>
-                </div>
-
+                <NotificationBell role="admin" userId={1} />
                 <div className="user-profile">
                     <div className="user-avatar">A</div>
                     <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Admin</span>

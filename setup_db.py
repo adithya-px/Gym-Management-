@@ -35,6 +35,7 @@ def init_db():
             phone VARCHAR(15),
             email VARCHAR(100) UNIQUE,
             password VARCHAR(255) NOT NULL,
+            status ENUM('pending', 'active', 'rejected') DEFAULT 'active',
             address VARCHAR(200),
             date_of_birth DATE,
             join_date DATE
@@ -47,6 +48,7 @@ def init_db():
             phone VARCHAR(15),
             email VARCHAR(100) UNIQUE,
             password VARCHAR(255) NOT NULL,
+            status ENUM('pending', 'active', 'rejected') DEFAULT 'active',
             specialization VARCHAR(100),
             experience_years INT
         )""")
@@ -81,6 +83,19 @@ def init_db():
             valid_from DATE,
             valid_until DATE,
             payment_mode VARCHAR(50),
+            invoice_number VARCHAR(100),
+            FOREIGN KEY (member_id) REFERENCES MEMBER(member_id),
+            FOREIGN KEY (plan_id) REFERENCES PLAN(plan_id)
+        )""")
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS BILLING_CYCLE (
+            cycle_id INT AUTO_INCREMENT PRIMARY KEY,
+            member_id INT,
+            plan_id INT,
+            due_date DATE,
+            paid_date DATE,
+            amount DECIMAL(10,2),
+            status ENUM('pending', 'paid', 'overdue'),
             FOREIGN KEY (member_id) REFERENCES MEMBER(member_id),
             FOREIGN KEY (plan_id) REFERENCES PLAN(plan_id)
         )""")
@@ -133,6 +148,131 @@ def init_db():
             FOREIGN KEY (instructor_id) REFERENCES INSTRUCTOR(instructor_id)
         )""")
 
+        cursor.execute("""CREATE TABLE IF NOT EXISTS EXERCISE (
+            exercise_id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100),
+            category VARCHAR(50),
+            muscle_group VARCHAR(50)
+        )""")
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS WORKOUT_LOG (
+            log_id INT AUTO_INCREMENT PRIMARY KEY,
+            member_id INT,
+            log_date DATE,
+            title VARCHAR(100),
+            notes TEXT,
+            FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
+        )""")
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS LOG_ENTRY (
+            entry_id INT AUTO_INCREMENT PRIMARY KEY,
+            log_id INT,
+            exercise_id INT,
+            set_no INT,
+            reps INT,
+            weight_kg DECIMAL(6,2),
+            FOREIGN KEY (log_id) REFERENCES WORKOUT_LOG(log_id) ON DELETE CASCADE,
+            FOREIGN KEY (exercise_id) REFERENCES EXERCISE(exercise_id)
+        )""")
+
+        cursor.execute("DROP VIEW IF EXISTS PERSONAL_BESTS")
+        cursor.execute("""
+            CREATE VIEW PERSONAL_BESTS AS
+            SELECT 
+                w.member_id, 
+                e.exercise_id, 
+                e.name as exercise_name, 
+                MAX(l.weight_kg) as max_weight 
+            FROM LOG_ENTRY l 
+            JOIN WORKOUT_LOG w ON l.log_id = w.log_id 
+            JOIN EXERCISE e ON l.exercise_id = e.exercise_id 
+            GROUP BY w.member_id, e.exercise_id, e.name
+        """)
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS NOTIFICATION (
+            notification_id INT AUTO_INCREMENT PRIMARY KEY,
+            recipient_id INT,
+            recipient_role ENUM('member','instructor','admin'),
+            type VARCHAR(50),
+            title VARCHAR(200),
+            message TEXT,
+            is_read BOOLEAN DEFAULT FALSE,
+            created_at DATETIME DEFAULT NOW()
+        )""")
+
+        # Drop existing procedure if exists
+        cursor.execute("DROP PROCEDURE IF EXISTS generate_daily_alerts")
+
+        cursor.execute("""
+            CREATE PROCEDURE generate_daily_alerts()
+            BEGIN
+                -- 1. Membership expiry
+                INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+                SELECT member_id, 'member', 'billing_expiry', 'Membership Expiring Soon', CONCAT('Your membership plan expires on ', due_date, '. Please renew to avoid interruption.')
+                FROM BILLING_CYCLE
+                WHERE status = 'pending' AND due_date = DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+                AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE recipient_id = BILLING_CYCLE.member_id AND type = 'billing_expiry' AND DATE(created_at) = CURDATE());
+
+                -- 2. Payment overdue (Member)
+                INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+                SELECT member_id, 'member', 'billing_overdue', 'Payment Overdue', CONCAT('Your payment of $', amount, ' is overdue since ', due_date, '.')
+                FROM BILLING_CYCLE
+                WHERE status = 'pending' AND due_date < CURDATE()
+                AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE recipient_id = BILLING_CYCLE.member_id AND type = 'billing_overdue' AND DATE(created_at) = CURDATE());
+                
+                -- 2b. Payment overdue (Admin)
+                INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+                SELECT 1, 'admin', 'admin_overdue', 'Overdue Payment Alert', CONCAT('Member ID ', member_id, ' has an overdue payment of $', amount, ' from ', due_date, '.')
+                FROM BILLING_CYCLE
+                WHERE status = 'pending' AND due_date < CURDATE()
+                AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'admin_overdue' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%Member ID ', member_id, '%'));
+
+                -- 3. Equipment maintenance (Admin)
+                INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+                SELECT 1, 'admin', 'equipment_maintenance', 'Equipment Maintenance Due', CONCAT('Equipment "', name, '" is due for maintenance on ', next_maintenance_date, '.')
+                FROM EQUIPMENT
+                WHERE next_maintenance_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+                AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'equipment_maintenance' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%', name, '%'));
+            END;
+        """)
+
+        # Drop existing trigger if it exists
+        cursor.execute("DROP TRIGGER IF EXISTS after_billing_paid")
+
+        # Create Trigger for auto-renewing billing cycles
+        cursor.execute("""
+            CREATE TRIGGER after_billing_paid
+            AFTER UPDATE ON BILLING_CYCLE
+            FOR EACH ROW
+            BEGIN
+                DECLARE cur_duration VARCHAR(50);
+                DECLARE num_val INT;
+                DECLARE unit VARCHAR(20);
+                
+                IF NEW.status = 'paid' AND OLD.status != 'paid' THEN
+                    SELECT duration INTO cur_duration FROM PLAN WHERE plan_id = NEW.plan_id;
+                    
+                    SET num_val = CAST(SUBSTRING_INDEX(cur_duration, ' ', 1) AS UNSIGNED);
+                    SET unit = SUBSTRING_INDEX(cur_duration, ' ', -1);
+                    
+                    IF unit LIKE '%Month%' THEN
+                        INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, status, amount)
+                        VALUES (NEW.member_id, NEW.plan_id, DATE_ADD(NEW.due_date, INTERVAL num_val MONTH), 'pending', NEW.amount);
+                    ELSEIF unit LIKE '%Day%' THEN
+                        INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, status, amount)
+                        VALUES (NEW.member_id, NEW.plan_id, DATE_ADD(NEW.due_date, INTERVAL num_val DAY), 'pending', NEW.amount);
+                    ELSEIF unit LIKE '%Year%' THEN
+                        INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, status, amount)
+                        VALUES (NEW.member_id, NEW.plan_id, DATE_ADD(NEW.due_date, INTERVAL num_val YEAR), 'pending', NEW.amount);
+                    ELSE
+                        -- Default to 1 month fallback
+                        INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, status, amount)
+                        VALUES (NEW.member_id, NEW.plan_id, DATE_ADD(NEW.due_date, INTERVAL 1 MONTH), 'pending', NEW.amount);
+                    END IF;
+                END IF;
+            END;
+        """)
+
         conn.commit()
         print("Tables ready!")
 
@@ -179,10 +319,20 @@ def init_db():
         cursor.execute("INSERT INTO MEMBER_PLAN (member_id, plan_id, instructor_id, start_date, end_date) VALUES (2,2,2,'2024-06-01',%s)", (expiring_soon,))
         cursor.execute("INSERT INTO MEMBER_PLAN (member_id, plan_id, instructor_id, start_date, end_date) VALUES (3,2,2,'2025-02-10',%s)", (expired,))
 
-        # Payments
-        cursor.execute("INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode) VALUES (1,1,150.00,'2025-01-15','2025-01-15',%s,'Credit Card')", (active,))
-        cursor.execute("INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode) VALUES (2,2,120.00,'2024-12-01','2024-12-01',%s,'Cash')", (expiring_soon,))
-        cursor.execute("INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode) VALUES (3,2,120.00,'2025-02-10','2025-02-10',%s,'Credit Card')", (expired,))
+        # Payments & Billing Cycles
+        inv_year = today.year
+        cursor.execute("INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode, invoice_number) VALUES (1,1,150.00,'2025-01-15','2025-01-15',%s,'Credit Card', %s)", (active, f'INV-{inv_year}-1-001'))
+        cursor.execute("INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, paid_date, amount, status) VALUES (1,1,'2025-01-15','2025-01-15',150.00,'paid')")
+        
+        cursor.execute("INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode, invoice_number) VALUES (2,2,120.00,'2024-12-01','2024-12-01',%s,'Cash', %s)", (expiring_soon, f'INV-{inv_year}-2-001'))
+        cursor.execute("INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, paid_date, amount, status) VALUES (2,2,'2024-12-01','2024-12-01',120.00,'paid')")
+        
+        cursor.execute("INSERT INTO PAYMENT (member_id, plan_id, amount, payment_date, valid_from, valid_until, payment_mode, invoice_number) VALUES (3,2,120.00,'2025-02-10','2025-02-10',%s,'Credit Card', %s)", (expired, f'INV-{inv_year}-3-001'))
+        cursor.execute("INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, paid_date, amount, status) VALUES (3,2,'2025-02-10','2025-02-10',120.00,'paid')")
+        
+        # Add some pending cycles (auto-generated ones due in future/past)
+        cursor.execute("INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, paid_date, amount, status) VALUES (2,2,%s,NULL,120.00,'pending')", (expiring_soon,))
+        cursor.execute("INSERT INTO BILLING_CYCLE (member_id, plan_id, due_date, paid_date, amount, status) VALUES (3,2,%s,NULL,120.00,'overdue')", (expired,))
 
         # Equipment
         cursor.execute("INSERT INTO EQUIPMENT (name, category, quantity, condition_status, next_maintenance_date) VALUES ('Treadmill X1','Cardio',5,'Good',%s)", (active,))
@@ -215,7 +365,51 @@ def init_db():
             (1, 1, 180, 250, 2800, '6 egg whites + oatmeal + banana', 'Grilled chicken breast + brown rice + broccoli', 'Salmon + sweet potato + mixed greens', 'Whey protein shake + almonds', 'Drink at least 3L water daily. Take creatine post-workout.'))
         cursor.execute("INSERT INTO DIET_PLAN (member_id, instructor_id, protein_g, carbs_g, kcal_goal, breakfast, lunch, dinner, snacks, notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (2, 2, 140, 180, 2200, 'Greek yogurt + granola + berries', 'Turkey wrap + quinoa salad', 'Grilled fish + steamed veggies', 'Protein bar + green tea', 'Focus on high-protein, low-carb meals on rest days.'))
+        cursor.execute("INSERT INTO DIET_PLAN (member_id, instructor_id, protein_g, carbs_g, kcal_goal, breakfast, lunch, dinner, snacks, notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (3, 2, 120, 200, 1800, 'Smoothie bowl with spinach + chia seeds + mixed berries', 'Grilled tofu salad + avocado + lemon dressing', 'Baked chicken thighs + roasted zucchini + quinoa', 'Apple slices + peanut butter', 'Keep sugar intake under 25g/day. Add 30 min walk on rest days.'))
 
+        # Exercises
+        exercises = [
+            ('Bench Press', 'Push', 'Chest'),
+            ('Incline Dumbbell Press', 'Push', 'Chest'),
+            ('Squat', 'Legs', 'Quads'),
+            ('Leg Press', 'Legs', 'Quads'),
+            ('Deadlift', 'Pull', 'Back'),
+            ('Pull-up', 'Pull', 'Back'),
+            ('Overhead Press', 'Push', 'Shoulders'),
+            ('Barbell Curl', 'Pull', 'Biceps'),
+            ('Tricep Extension', 'Push', 'Triceps'),
+            ('Crunch', 'Core', 'Abs')
+        ]
+        for ex in exercises:
+            cursor.execute("INSERT INTO EXERCISE (name, category, muscle_group) VALUES (%s,%s,%s)", ex)
+            
+        # Workout Logs for Mike (1)
+        cursor.execute("INSERT INTO WORKOUT_LOG (member_id, log_date, title, notes) VALUES (1, %s, 'Chest & Triceps Push', 'Felt strong on bench today')", (today - timedelta(days=2),))
+        log_id1 = cursor.lastrowid
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,1,1,10,60)", (log_id1,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,1,2,8,70)", (log_id1,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,1,3,6,80)", (log_id1,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,9,1,12,20)", (log_id1,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,9,2,10,25)", (log_id1,))
+        
+        cursor.execute("INSERT INTO WORKOUT_LOG (member_id, log_date, title, notes) VALUES (1, %s, 'Leg Day Pull', 'Tough squats')", (today,))
+        log_id2 = cursor.lastrowid
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,3,1,10,80)", (log_id2,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,3,2,8,90)", (log_id2,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,3,3,5,100)", (log_id2,))
+        cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,4,1,12,150)", (log_id2,))
+
+        # Notifications Seed Data
+        cursor.execute("""
+            INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message, is_read, created_at) VALUES 
+            (1, 'member', 'system', 'Welcome to Neon Iron', 'Enjoy your new membership plan!', 1, %s),
+            (2, 'member', 'billing_overdue', 'Payment Overdue', 'Your payment of $120.00 is overdue.', 0, %s),
+            (1, 'admin', 'admin_overdue', 'Overdue Payment Alert', 'Member ID 2 has an overdue payment of $120.00 from 2024-12-01.', 0, %s)
+        """, (today - timedelta(days=2), today, today))
+
+        cursor.callproc('generate_daily_alerts')
+        
         conn.commit()
         print("Seed data inserted successfully!")
 

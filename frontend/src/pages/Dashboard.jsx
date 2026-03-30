@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { NeonCard } from '../components/NeonCard';
 import { Users, Briefcase, Activity, DollarSign, Dumbbell, AlertTriangle, Loader, Apple } from 'lucide-react';
@@ -118,23 +119,23 @@ const Dashboard = () => {
 
             <div className="charts-grid">
                 {/* Chart Area 1 - Attendance Trend */}
-                <div className="neon-card" style={{ minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
+                <GlowCard className="neon-card" style={{ minHeight: '320px', display: 'flex', flexDirection: 'column' }} customSize={true}>
                     <div className="card-title"><Activity size={18} /> Attendance Trend</div>
                     <div style={{ flex: 1, position: 'relative', marginTop: '1rem' }}>
                         <Line data={attendanceData} options={chartOptions} />
                     </div>
-                </div>
+                </GlowCard>
 
                 {/* Chart Area 2 - Monthly Revenue */}
-                <div className="neon-card" style={{ minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
+                <GlowCard className="neon-card" style={{ minHeight: '320px', display: 'flex', flexDirection: 'column' }} customSize={true}>
                     <div className="card-title text-accent-tertiary"><DollarSign size={18} /> Monthly Revenue</div>
                     <div style={{ flex: 1, position: 'relative', marginTop: '1rem' }}>
                         <Bar data={revenueData} options={chartOptions} />
                     </div>
-                </div>
+                </GlowCard>
 
                 {/* Expiring Members Alert Panel */}
-                <div className="neon-card neon-card-alert">
+                <GlowCard className="neon-card neon-card-alert" customSize={true}>
                     <div className="card-title text-danger">
                         <AlertTriangle size={20} /> Expiring Soon (Next 7 Days)
                     </div>
@@ -163,7 +164,7 @@ const Dashboard = () => {
                             ))
                         )}
                     </div>
-                </div>
+                </GlowCard>
             </div>
         </div>
     );

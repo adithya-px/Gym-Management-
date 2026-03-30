@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Clock, Plus, Edit2, Trash2, X, Save, AlertCircle, Filter, List, Activity, Calendar } from 'lucide-react';
 import axios from 'axios';
@@ -161,7 +162,7 @@ const AttendancePage = () => {
 
             {/* Top Dashboard Filters & Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div className="neon-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <GlowCard className="neon-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }} customSize={true}>
                     <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
                         <Filter size={16} /> Filter by Member
                     </label>
@@ -177,9 +178,9 @@ const AttendancePage = () => {
                         <option value="">All Members (Total Gym)</option>
                         {filteredMembers.map(m => <option key={m.member_id} value={m.member_id}>{m.first_name} {m.last_name}</option>)}
                     </select>
-                </div>
+                </GlowCard>
 
-                <div className="neon-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <GlowCard className="neon-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }} customSize={true}>
                     <div style={{ padding: '1rem', background: 'rgba(69, 162, 158, 0.1)', borderRadius: '0.5rem', color: 'var(--electric-blue)' }}>
                         <Activity size={32} />
                     </div>
@@ -187,9 +188,9 @@ const AttendancePage = () => {
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Today's Check-ins</div>
                         <div style={{ color: 'var(--text-primary)', fontSize: '1.8rem', fontWeight: 'bold' }}>{todayCount}</div>
                     </div>
-                </div>
+                </GlowCard>
 
-                <div className="neon-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <GlowCard className="neon-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }} customSize={true}>
                     <div style={{ padding: '1rem', background: 'rgba(102, 252, 241, 0.1)', borderRadius: '0.5rem', color: 'var(--neon-green)' }}>
                         <Calendar size={32} />
                     </div>
@@ -197,12 +198,12 @@ const AttendancePage = () => {
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>This Month</div>
                         <div style={{ color: 'var(--text-primary)', fontSize: '1.8rem', fontWeight: 'bold' }}>{monthCount}</div>
                     </div>
-                </div>
+                </GlowCard>
             </div>
 
             {/* Add Record Form */}
             {showForm && (
-                <div className="neon-card" style={{ marginBottom: '2rem' }}>
+                <GlowCard className="neon-card" style={{ marginBottom: '2rem' }} customSize={true}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit' }}>{editing ? 'Edit Record' : 'New Record'}</h3>
                         <button onClick={resetForm} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -239,12 +240,12 @@ const AttendancePage = () => {
                             <button type="submit" style={{ padding: '0.6rem 1.2rem', background: 'transparent', border: '1px solid var(--neon-green)', color: 'var(--neon-green)', borderRadius: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Save size={16} /> Save</button>
                         </div>
                     </form>
-                </div>
+                </GlowCard>
             )}
 
             {/* Chart Section */}
             {!showLog && sortedDates.length > 0 && (
-                <div className="neon-card" style={{ marginBottom: '2rem' }}>
+                <GlowCard className="neon-card" style={{ marginBottom: '2rem' }} customSize={true}>
                     <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontFamily: 'Outfit' }}>
                         {selectedMember ? 'Member Attendance Activity' : 'Total Gym Attendance Activity'}
                     </h3>
@@ -262,12 +263,12 @@ const AttendancePage = () => {
                             }}
                         />
                     </div>
-                </div>
+                </GlowCard>
             )}
 
             {/* Raw Log Table Toggleable */}
             {showLog && (
-                <div className="neon-card" style={{ padding: 0, overflow: 'auto', border: '1px solid var(--electric-blue)' }}>
+                <GlowCard className="neon-card" style={{ padding: 0, overflow: 'auto', border: '1px solid var(--electric-blue)' }} customSize={true}>
                     <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(69,162,158,0.05)' }}>
                         <h3 style={{ color: 'var(--text-primary)', margin: 0, fontFamily: 'Outfit' }}>Detailed Attendance Log {selectedMember && '- Filtered'}</h3>
                         <button onClick={() => setShowLog(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -318,7 +319,7 @@ const AttendancePage = () => {
                             })}
                         </tbody>
                     </table>
-                </div>
+                </GlowCard>
             )}
         </div>
     );

@@ -1,3 +1,4 @@
+import { GlowCard } from './components/GlowCard';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
@@ -13,14 +14,17 @@ import MemberPlansPage from './pages/MemberPlansPage';
 import PaymentsPage from './pages/PaymentsPage';
 import AttendancePage from './pages/AttendancePage';
 import DietPlansPage from './pages/DietPlansPage';
+import BillingPage from './pages/BillingPage';
+import Register from './pages/Register';
+import PendingApprovalsPage from './pages/PendingApprovalsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Placeholder components for routing
 const PlaceholderPage = ({ title }) => (
-  <div className="neon-card" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  <GlowCard className="neon-card" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }} customSize={true}>
     <h1 style={{ color: 'var(--text-muted)', fontSize: '2rem' }}>{title} Module Coming Soon</h1>
-  </div>
+  </GlowCard>
 );
 
 function App() {
@@ -30,6 +34,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Member Protected Routes (No Sidebar layout for now) */}
           <Route
@@ -69,6 +74,8 @@ function App() {
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="equipment" element={<EquipmentPage />} />
             <Route path="diet-plans" element={<DietPlansPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="approvals" element={<PendingApprovalsPage />} />
           </Route>
 
           {/* Catch-all redirect */}

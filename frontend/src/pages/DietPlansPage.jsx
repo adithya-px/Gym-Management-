@@ -1,3 +1,4 @@
+import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Apple, Loader } from 'lucide-react';
 import axios from 'axios';
@@ -62,11 +63,11 @@ const DietPlansPage = () => {
             </div>
 
             {dietPlans.length === 0 ? (
-                <div className="neon-card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                <GlowCard className="neon-card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }} customSize={true}>
                     No diet plans assigned yet. Coaches can create diet plans for their students.
-                </div>
+                </GlowCard>
             ) : (
-                <div className="neon-card" style={{ padding: 0, overflow: 'auto' }}>
+                <GlowCard className="neon-card" style={{ padding: 0, overflow: 'auto' }} customSize={true}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -107,7 +108,7 @@ const DietPlansPage = () => {
                             ))}
                         </tbody>
                     </table>
-                </div>
+                </GlowCard>
             )}
         </div>
     );

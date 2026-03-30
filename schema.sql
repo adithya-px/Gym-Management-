@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS PLAN;
 DROP TABLE IF EXISTS INSTRUCTOR;
 DROP TABLE IF EXISTS MEMBER;
 DROP TABLE IF EXISTS ADMIN;
+DROP TABLE IF EXISTS NOTIFICATION;
 
 -- ADMIN TABLE
 CREATE TABLE ADMIN (
@@ -145,3 +146,53 @@ CREATE TABLE DIET_PLAN (
     FOREIGN KEY (instructor_id)
         REFERENCES INSTRUCTOR(instructor_id)
 );
+
+-- NOTIFICATION TABLE
+CREATE TABLE NOTIFICATION (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_id INT,
+    recipient_role ENUM('member','instructor','admin'),
+    type VARCHAR(50),
+    title VARCHAR(200),
+    message TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT NOW()
+);
+
+-- Drop existing procedure if exists
+DROP PROCEDURE IF EXISTS generate_daily_alerts;
+
+DELIMITER //
+
+CREATE PROCEDURE generate_daily_alerts()
+BEGIN
+    -- 1. Membership expiry
+    INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+    SELECT member_id, 'member', 'billing_expiry', 'Membership Expiring Soon', CONCAT('Your membership plan expires on ', due_date, '. Please renew to avoid interruption.')
+    FROM BILLING_CYCLE
+    WHERE status = 'pending' AND due_date = DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+    AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE recipient_id = BILLING_CYCLE.member_id AND type = 'billing_expiry' AND DATE(created_at) = CURDATE());
+
+    -- 2. Payment overdue (Member)
+    INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+    SELECT member_id, 'member', 'billing_overdue', 'Payment Overdue', CONCAT('Your payment of $', amount, ' is overdue since ', due_date, '.')
+    FROM BILLING_CYCLE
+    WHERE status = 'pending' AND due_date < CURDATE()
+    AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE recipient_id = BILLING_CYCLE.member_id AND type = 'billing_overdue' AND DATE(created_at) = CURDATE());
+    
+    -- 2b. Payment overdue (Admin)
+    INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+    SELECT 1, 'admin', 'admin_overdue', 'Overdue Payment Alert', CONCAT('Member ID ', member_id, ' has an overdue payment of $', amount, ' from ', due_date, '.')
+    FROM BILLING_CYCLE
+    WHERE status = 'pending' AND due_date < CURDATE()
+    AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'admin_overdue' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%Member ID ', member_id, '%'));
+
+    -- 3. Equipment maintenance (Admin)
+    INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message)
+    SELECT 1, 'admin', 'equipment_maintenance', 'Equipment Maintenance Due', CONCAT('Equipment "', name, '" is due for maintenance on ', next_maintenance_date, '.')
+    FROM EQUIPMENT
+    WHERE next_maintenance_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+    AND NOT EXISTS (SELECT 1 FROM NOTIFICATION WHERE type = 'equipment_maintenance' AND DATE(created_at) = CURDATE() AND message LIKE CONCAT('%', name, '%'));
+END //
+
+DELIMITER ;
