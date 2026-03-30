@@ -1,8 +1,9 @@
+import API_BASE from '../config';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Bell, Check, Trash2, Info } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const NotificationBell = ({ userId, role }) => {
     const [notifications, setNotifications] = useState([]);

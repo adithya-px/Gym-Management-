@@ -17,6 +17,7 @@ import DietPlansPage from './pages/DietPlansPage';
 import BillingPage from './pages/BillingPage';
 import Register from './pages/Register';
 import PendingApprovalsPage from './pages/PendingApprovalsPage';
+import ClassesPage from './pages/ClassesPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -76,6 +77,7 @@ function App() {
             <Route path="diet-plans" element={<DietPlansPage />} />
             <Route path="billing" element={<BillingPage />} />
             <Route path="approvals" element={<PendingApprovalsPage />} />
+            <Route path="classes" element={<ClassesPage />} />
           </Route>
 
           {/* Catch-all redirect */}

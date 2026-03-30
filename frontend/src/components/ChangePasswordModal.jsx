@@ -1,10 +1,11 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { KeyRound, X, CheckCircle, AlertCircle } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const ChangePasswordModal = ({ isOpen, onClose }) => {
     const { user } = useAuth();

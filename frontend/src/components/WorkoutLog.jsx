@@ -1,10 +1,11 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Activity, Plus, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const WorkoutLog = ({ memberId }) => {
     const [logs, setLogs] = useState([]);

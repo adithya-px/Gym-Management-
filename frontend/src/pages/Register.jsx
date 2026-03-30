@@ -1,10 +1,11 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserPlus, Activity, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const Register = () => {
     const navigate = useNavigate();

@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -5,7 +6,7 @@ import { NeonCard } from '../components/NeonCard';
 import { Activity, LogOut, Users, Send, MessageCircle, BarChart3, Apple, Save, Trash2, Edit2 } from 'lucide-react';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const InstructorDashboard = () => {
     const { user, logout } = useAuth();

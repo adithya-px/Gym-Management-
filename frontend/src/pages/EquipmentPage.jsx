@@ -1,10 +1,11 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Dumbbell, Plus, Edit2, Trash2, X, Save, AlertTriangle, Wrench, ChevronDown, ChevronUp, MessageSquare, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const conditionColors = {
     'Excellent': 'var(--neon-green)',

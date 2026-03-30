@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -11,9 +11,9 @@ from functools import wraps
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'neon-iron-secret-key-123')
-# Allow CORS for React frontend (default Vite port)
+# Allow CORS for React frontend
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Database connection function
@@ -23,7 +23,8 @@ def get_db_connection():
             host=os.getenv("DB_HOST", "localhost"),
             user=os.getenv("DB_USER", "root"),
             password=os.getenv("DB_PASSWORD", ""),
-            database=os.getenv("DB_NAME", "gym_management")
+            database=os.getenv("DB_NAME", "gym_management"),
+            port=int(os.getenv("DB_PORT", "3306"))
         )
         return connection
     except Error as e:
@@ -1769,6 +1770,281 @@ def get_exercise_progress(member_id, exercise_id):
     finally:
         if conn.is_connected(): c.close(); conn.close()
 
+# ==========================================
+# GYM CLASS & BOOKING Endpoints
+# ==========================================
+# Access: Admin/Instructors create & manage classes. Members browse & book.
+
+@app.route('/api/classes', methods=['GET'])
+def get_all_classes():
+    """List all active classes with instructor names and booking counts"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT gc.*, CONCAT(i.first_name, ' ', i.last_name) as instructor_name,
+                   (SELECT COUNT(*) FROM CLASS_BOOKING cb WHERE cb.class_id = gc.class_id AND cb.status = 'confirmed' AND cb.booked_date >= CURDATE()) as current_bookings
+            FROM GYM_CLASS gc
+            JOIN INSTRUCTOR i ON gc.instructor_id = i.instructor_id
+            WHERE gc.is_active = 1
+            ORDER BY FIELD(gc.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), gc.start_time
+        """)
+        result = c.fetchall()
+        for row in result:
+            if row.get('start_time'): row['start_time'] = str(row['start_time'])[:5]
+            if row.get('end_time'): row['end_time'] = str(row['end_time'])[:5]
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/classes', methods=['POST'])
+def create_class():
+    """Admin or Instructor creates a new class"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (data.get('title'), data.get('description'), data.get('instructor_id'),
+             data.get('day_of_week'), data.get('start_time'), data.get('end_time'),
+             data.get('max_capacity', 20), data.get('category'))
+        )
+        conn.commit()
+        return jsonify({"message": "Class created", "id": c.lastrowid}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/classes/<int:class_id>', methods=['PUT'])
+def update_class(class_id):
+    """Admin or owning Instructor updates a class"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        c = conn.cursor()
+        c.execute(
+            """UPDATE GYM_CLASS SET title=%s, description=%s, day_of_week=%s, start_time=%s,
+               end_time=%s, max_capacity=%s, category=%s, is_active=%s WHERE class_id=%s""",
+            (data.get('title'), data.get('description'), data.get('day_of_week'),
+             data.get('start_time'), data.get('end_time'), data.get('max_capacity'),
+             data.get('category'), data.get('is_active', True), class_id)
+        )
+        conn.commit()
+        return jsonify({"message": "Class updated"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/classes/<int:class_id>', methods=['DELETE'])
+def delete_class(class_id):
+    """Admin soft-deletes a class"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE GYM_CLASS SET is_active = 0 WHERE class_id = %s", (class_id,))
+        conn.commit()
+        return jsonify({"message": "Class deactivated"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/classes/<int:class_id>/book', methods=['POST'])
+def book_class(class_id):
+    """Member books a spot in a class for a specific date"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        member_id = data.get('member_id')
+        booked_date = data.get('booked_date')
+
+        c = conn.cursor(dictionary=True)
+        # Check capacity
+        c.execute("SELECT max_capacity FROM GYM_CLASS WHERE class_id = %s", (class_id,))
+        cls = c.fetchone()
+        if not cls:
+            return jsonify({"error": "Class not found"}), 404
+
+        c.execute("SELECT COUNT(*) as cnt FROM CLASS_BOOKING WHERE class_id = %s AND booked_date = %s AND status = 'confirmed'", (class_id, booked_date))
+        count = c.fetchone()['cnt']
+        if count >= cls['max_capacity']:
+            return jsonify({"error": "Class is full"}), 400
+
+        c.execute(
+            "INSERT INTO CLASS_BOOKING (class_id, member_id, booked_date) VALUES (%s, %s, %s)",
+            (class_id, member_id, booked_date)
+        )
+        conn.commit()
+        return jsonify({"message": "Booking confirmed", "id": c.lastrowid}), 201
+    except Error as e:
+        if 'Duplicate entry' in str(e):
+            return jsonify({"error": "Already booked for this date"}), 400
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/bookings/<int:booking_id>/cancel', methods=['PUT'])
+def cancel_booking(booking_id):
+    """Member cancels a booking"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE CLASS_BOOKING SET status = 'cancelled' WHERE booking_id = %s", (booking_id,))
+        conn.commit()
+        return jsonify({"message": "Booking cancelled"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/member/<int:member_id>/bookings', methods=['GET'])
+def get_member_bookings(member_id):
+    """Get all bookings for a member"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT cb.*, gc.title, gc.day_of_week, gc.start_time, gc.end_time, gc.category,
+                   CONCAT(i.first_name, ' ', i.last_name) as instructor_name
+            FROM CLASS_BOOKING cb
+            JOIN GYM_CLASS gc ON cb.class_id = gc.class_id
+            JOIN INSTRUCTOR i ON gc.instructor_id = i.instructor_id
+            WHERE cb.member_id = %s AND cb.booked_date >= CURDATE()
+            ORDER BY cb.booked_date, gc.start_time
+        """, (member_id,))
+        result = c.fetchall()
+        for row in result:
+            if row.get('start_time'): row['start_time'] = str(row['start_time'])[:5]
+            if row.get('end_time'): row['end_time'] = str(row['end_time'])[:5]
+            if row.get('booked_date'): row['booked_date'] = row['booked_date'].strftime('%Y-%m-%d')
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/instructor/<int:instructor_id>/classes', methods=['GET'])
+def get_instructor_classes(instructor_id):
+    """Get classes managed by an instructor with booking counts"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT gc.*,
+                   (SELECT COUNT(*) FROM CLASS_BOOKING cb WHERE cb.class_id = gc.class_id AND cb.status = 'confirmed' AND cb.booked_date >= CURDATE()) as current_bookings
+            FROM GYM_CLASS gc
+            WHERE gc.instructor_id = %s AND gc.is_active = 1
+            ORDER BY FIELD(gc.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), gc.start_time
+        """, (instructor_id,))
+        result = c.fetchall()
+        for row in result:
+            if row.get('start_time'): row['start_time'] = str(row['start_time'])[:5]
+            if row.get('end_time'): row['end_time'] = str(row['end_time'])[:5]
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/classes/<int:class_id>/bookings', methods=['GET'])
+def get_class_bookings(class_id):
+    """Instructor/Admin: see who's booked for a class"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        booked_date = request.args.get('date')
+        query = """
+            SELECT cb.*, CONCAT(m.first_name, ' ', m.last_name) as member_name, m.email
+            FROM CLASS_BOOKING cb
+            JOIN MEMBER m ON cb.member_id = m.member_id
+            WHERE cb.class_id = %s AND cb.status = 'confirmed'
+        """
+        params = [class_id]
+        if booked_date:
+            query += " AND cb.booked_date = %s"
+            params.append(booked_date)
+        query += " ORDER BY cb.booked_date, m.first_name"
+        c.execute(query, params)
+        result = c.fetchall()
+        for row in result:
+            if row.get('booked_date'): row['booked_date'] = row['booked_date'].strftime('%Y-%m-%d')
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+# ==========================================
+# BODY METRIC Endpoints
+# ==========================================
+
+@app.route('/api/member/<int:member_id>/body-metrics', methods=['GET'])
+def get_body_metrics(member_id):
+    """Get all body metrics for a member, ordered by date"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor(dictionary=True)
+        c.execute("""
+            SELECT * FROM BODY_METRIC
+            WHERE member_id = %s ORDER BY recorded_date ASC
+        """, (member_id,))
+        result = c.fetchall()
+        for row in result:
+            if row.get('recorded_date'): row['recorded_date'] = row['recorded_date'].strftime('%Y-%m-%d')
+            if row.get('weight_kg'): row['weight_kg'] = float(row['weight_kg'])
+            if row.get('body_fat_pct'): row['body_fat_pct'] = float(row['body_fat_pct'])
+            if row.get('created_at'): row['created_at'] = row['created_at'].strftime('%Y-%m-%d %H:%M')
+        return jsonify(result)
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/member/<int:member_id>/body-metrics', methods=['POST'])
+def add_body_metric(member_id):
+    """Member logs a new body metric"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        data = request.json
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO BODY_METRIC (member_id, recorded_date, weight_kg, body_fat_pct, notes)
+               VALUES (%s, %s, %s, %s, %s)""",
+            (member_id, data.get('recorded_date'), data.get('weight_kg'),
+             data.get('body_fat_pct'), data.get('notes'))
+        )
+        conn.commit()
+        return jsonify({"message": "Metric recorded", "id": c.lastrowid}), 201
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
+@app.route('/api/body-metrics/<int:metric_id>', methods=['DELETE'])
+def delete_body_metric(metric_id):
+    """Delete a body metric entry"""
+    conn = get_db_connection()
+    if not conn: return jsonify({"error": "DB error"}), 500
+    try:
+        c = conn.cursor()
+        c.execute("DELETE FROM BODY_METRIC WHERE metric_id = %s", (metric_id,))
+        conn.commit()
+        return jsonify({"message": "Metric deleted"})
+    except Error as e: return jsonify({"error": str(e)}), 500
+    finally:
+        if conn.is_connected(): c.close(); conn.close()
+
 # --- NOTIFICATIONS ---
 
 @app.route('/api/notifications/<string:role>/<int:user_id>', methods=['GET'])
@@ -1861,5 +2137,15 @@ def generate_alerts():
     finally:
         if conn.is_connected(): c.close(); conn.close()
 
+# Serve React frontend (SPA catch-all — must be LAST route)
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, 'index.html')
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV', 'development') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)

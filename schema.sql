@@ -10,6 +10,9 @@ DROP TABLE IF EXISTS EQUIPMENT;
 DROP TABLE IF EXISTS PAYMENT;
 DROP TABLE IF EXISTS MEMBER_PLAN;
 DROP TABLE IF EXISTS PLAN;
+DROP TABLE IF EXISTS CLASS_BOOKING;
+DROP TABLE IF EXISTS GYM_CLASS;
+DROP TABLE IF EXISTS BODY_METRIC;
 DROP TABLE IF EXISTS INSTRUCTOR;
 DROP TABLE IF EXISTS MEMBER;
 DROP TABLE IF EXISTS ADMIN;
@@ -161,6 +164,47 @@ CREATE TABLE DIET_PLAN (
         REFERENCES MEMBER(member_id),
     FOREIGN KEY (instructor_id)
         REFERENCES INSTRUCTOR(instructor_id)
+);
+
+-- GYM_CLASS TABLE
+CREATE TABLE GYM_CLASS (
+    class_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    instructor_id INT,
+    day_of_week ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'),
+    start_time TIME,
+    end_time TIME,
+    max_capacity INT DEFAULT 20,
+    category VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT NOW(),
+    FOREIGN KEY (instructor_id) REFERENCES INSTRUCTOR(instructor_id)
+);
+
+-- CLASS_BOOKING TABLE
+CREATE TABLE CLASS_BOOKING (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT,
+    member_id INT,
+    booked_date DATE,
+    status ENUM('confirmed','cancelled','attended') DEFAULT 'confirmed',
+    created_at DATETIME DEFAULT NOW(),
+    FOREIGN KEY (class_id) REFERENCES GYM_CLASS(class_id),
+    FOREIGN KEY (member_id) REFERENCES MEMBER(member_id),
+    UNIQUE KEY unique_booking (class_id, member_id, booked_date)
+);
+
+-- BODY_METRIC TABLE
+CREATE TABLE BODY_METRIC (
+    metric_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT,
+    recorded_date DATE,
+    weight_kg DECIMAL(5,2),
+    body_fat_pct DECIMAL(4,1),
+    notes TEXT,
+    created_at DATETIME DEFAULT NOW(),
+    FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
 );
 
 -- NOTIFICATION TABLE

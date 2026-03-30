@@ -1,9 +1,10 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Apple, Loader } from 'lucide-react';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const DietPlansPage = () => {
     const [dietPlans, setDietPlans] = useState([]);

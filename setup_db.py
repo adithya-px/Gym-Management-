@@ -12,7 +12,8 @@ def init_db():
         conn = mysql.connector.connect(
             host=os.getenv("DB_HOST", "localhost"),
             user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", "")
+            password=os.getenv("DB_PASSWORD", ""),
+            port=int(os.getenv("DB_PORT", "3306"))
         )
         cursor = conn.cursor()
 
@@ -202,6 +203,44 @@ def init_db():
             JOIN EXERCISE e ON l.exercise_id = e.exercise_id 
             GROUP BY w.member_id, e.exercise_id, e.name
         """)
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS GYM_CLASS (
+            class_id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(100) NOT NULL,
+            description TEXT,
+            instructor_id INT,
+            day_of_week ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'),
+            start_time TIME,
+            end_time TIME,
+            max_capacity INT DEFAULT 20,
+            category VARCHAR(50),
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at DATETIME DEFAULT NOW(),
+            FOREIGN KEY (instructor_id) REFERENCES INSTRUCTOR(instructor_id)
+        )""")
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS CLASS_BOOKING (
+            booking_id INT AUTO_INCREMENT PRIMARY KEY,
+            class_id INT,
+            member_id INT,
+            booked_date DATE,
+            status ENUM('confirmed','cancelled','attended') DEFAULT 'confirmed',
+            created_at DATETIME DEFAULT NOW(),
+            FOREIGN KEY (class_id) REFERENCES GYM_CLASS(class_id),
+            FOREIGN KEY (member_id) REFERENCES MEMBER(member_id),
+            UNIQUE KEY unique_booking (class_id, member_id, booked_date)
+        )""")
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS BODY_METRIC (
+            metric_id INT AUTO_INCREMENT PRIMARY KEY,
+            member_id INT,
+            recorded_date DATE,
+            weight_kg DECIMAL(5,2),
+            body_fat_pct DECIMAL(4,1),
+            notes TEXT,
+            created_at DATETIME DEFAULT NOW(),
+            FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
+        )""")
 
         cursor.execute("""CREATE TABLE IF NOT EXISTS NOTIFICATION (
             notification_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -429,6 +468,54 @@ def init_db():
         cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,3,3,5,100)", (log_id2,))
         cursor.execute("INSERT INTO LOG_ENTRY (log_id, exercise_id, set_no, reps, weight_kg) VALUES (%s,4,1,12,150)", (log_id2,))
 
+        # Gym Classes
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Morning HIIT', 'High-intensity interval training to kickstart your morning', 1, 'Monday', '07:00', '08:00', 15, 'Cardio')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Morning HIIT', 'High-intensity interval training to kickstart your morning', 1, 'Wednesday', '07:00', '08:00', 15, 'Cardio')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Yoga Flow', 'Relaxing vinyasa yoga for flexibility and mindfulness', 2, 'Tuesday', '09:00', '10:00', 20, 'Flexibility')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Yoga Flow', 'Relaxing vinyasa yoga for flexibility and mindfulness', 2, 'Thursday', '09:00', '10:00', 20, 'Flexibility')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Strength Fundamentals', 'Master the big lifts with proper form', 1, 'Tuesday', '17:00', '18:30', 12, 'Strength')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Strength Fundamentals', 'Master the big lifts with proper form', 1, 'Thursday', '17:00', '18:30', 12, 'Strength')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Spin Cycle', 'Indoor cycling with energizing playlists', 2, 'Friday', '18:00', '19:00', 25, 'Cardio')")
+        cursor.execute("INSERT INTO GYM_CLASS (title, description, instructor_id, day_of_week, start_time, end_time, max_capacity, category) VALUES ('Weekend Bootcamp', 'Full-body weekend warrior workout', 1, 'Saturday', '10:00', '11:30', 18, 'Functional')")
+
+        # Class Bookings (next occurrence dates)
+        from datetime import datetime
+        # Find next Monday, Tuesday etc. from today
+        def next_weekday(d, weekday):
+            days_ahead = weekday - d.weekday()
+            if days_ahead <= 0: days_ahead += 7
+            return d + timedelta(days=days_ahead)
+
+        next_mon = next_weekday(today, 0)
+        next_tue = next_weekday(today, 1)
+        next_fri = next_weekday(today, 4)
+        next_sat = next_weekday(today, 5)
+
+        cursor.execute("INSERT INTO CLASS_BOOKING (class_id, member_id, booked_date) VALUES (1, 1, %s)", (next_mon,))
+        cursor.execute("INSERT INTO CLASS_BOOKING (class_id, member_id, booked_date) VALUES (3, 1, %s)", (next_tue,))
+        cursor.execute("INSERT INTO CLASS_BOOKING (class_id, member_id, booked_date) VALUES (7, 2, %s)", (next_fri,))
+        cursor.execute("INSERT INTO CLASS_BOOKING (class_id, member_id, booked_date) VALUES (8, 1, %s)", (next_sat,))
+        cursor.execute("INSERT INTO CLASS_BOOKING (class_id, member_id, booked_date) VALUES (8, 3, %s)", (next_sat,))
+
+        # Body Metrics for Mike (member 1) — 30 days of weight tracking
+        import random
+        base_weight = 82.5
+        base_bf = 18.0
+        for i in range(30, -1, -1):
+            d = today - timedelta(days=i)
+            # Simulate gradual weight loss / body recomp
+            w = base_weight - (30 - i) * 0.08 + random.uniform(-0.3, 0.3)
+            bf = base_bf - (30 - i) * 0.05 + random.uniform(-0.2, 0.2)
+            if i % 3 == 0:  # Log every 3 days
+                cursor.execute("INSERT INTO BODY_METRIC (member_id, recorded_date, weight_kg, body_fat_pct) VALUES (1, %s, %s, %s)", (d, round(w, 2), round(bf, 1)))
+
+        # Also add a few for Harvey (member 2)
+        for i in range(14, -1, -1):
+            d = today - timedelta(days=i)
+            w = 75.0 + random.uniform(-0.5, 0.5)
+            if i % 4 == 0:
+                cursor.execute("INSERT INTO BODY_METRIC (member_id, recorded_date, weight_kg, body_fat_pct) VALUES (2, %s, %s, %s)", (d, round(w, 2), round(15.5 + random.uniform(-0.3, 0.3), 1)))
+
         # Notifications Seed Data
         cursor.execute("""
             INSERT INTO NOTIFICATION (recipient_id, recipient_role, type, title, message, is_read, created_at) VALUES 
@@ -459,7 +546,8 @@ if __name__ == "__main__":
             conn = mysql.connector.connect(
                 host=os.getenv("DB_HOST", "localhost"),
                 user=os.getenv("DB_USER", "root"),
-                password=os.getenv("DB_PASSWORD", "")
+                password=os.getenv("DB_PASSWORD", ""),
+                port=int(os.getenv("DB_PORT", "3306"))
             )
             cursor = conn.cursor()
             cursor.execute("DROP DATABASE IF EXISTS gym_management")

@@ -1,10 +1,11 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const PendingApprovalsPage = () => {
     const { user } = useAuth();

@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -6,9 +7,10 @@ import { Bar } from 'react-chartjs-2';
 import axios from 'axios';
 import '../chartSetup';
 import WorkoutLog from '../components/WorkoutLog';
+import ProgressTracker from '../components/ProgressTracker';
 import NotificationBell from '../components/NotificationBell';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const MemberDashboard = () => {
     const { user, logout } = useAuth();
@@ -27,20 +29,23 @@ const MemberDashboard = () => {
         address: '',
         date_of_birth: ''
     });
+    const [classBookings, setClassBookings] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [statsRes, chartsRes, msgRes, dietRes] = await Promise.all([
+                const [statsRes, chartsRes, msgRes, dietRes, bookingsRes] = await Promise.all([
                     axios.get(`${API}/member/${user.id}/stats`),
                     axios.get(`${API}/member/${user.id}/charts`),
                     axios.get(`${API}/member/${user.id}/messages`),
-                    axios.get(`${API}/member/${user.id}/diet-plan`).catch(() => ({ data: null }))
+                    axios.get(`${API}/member/${user.id}/diet-plan`).catch(() => ({ data: null })),
+                    axios.get(`${API}/member/${user.id}/bookings`).catch(() => ({ data: [] }))
                 ]);
                 setStats(statsRes.data);
                 setCharts(chartsRes.data);
                 setMessages(msgRes.data);
                 setDietPlan(dietRes.data);
+                setClassBookings(bookingsRes.data);
             } catch (err) {
                 console.error('Failed to fetch member data', err);
             } finally {
@@ -447,6 +452,29 @@ const MemberDashboard = () => {
                     </GlowCard>
                 </div>
 
+                {/* My Upcoming Classes */}
+                {classBookings.filter(b => b.status === 'confirmed').length > 0 && (
+                    <GlowCard className="neon-card" customSize={true} style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ color: 'var(--text-primary)', fontFamily: 'Outfit', margin: '0 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                            <Calendar size={18} color="var(--electric-blue)" /> My Upcoming Classes
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            {classBookings.filter(b => b.status === 'confirmed').slice(0, 4).map(b => (
+                                <div key={b.booking_id} style={{
+                                    padding: '0.75rem 1rem', backgroundColor: 'rgba(102, 252, 241, 0.05)',
+                                    border: '1px solid rgba(102, 252, 241, 0.15)', borderRadius: '0.6rem', minWidth: '200px'
+                                }}>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.9rem' }}>{b.title}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                                        {b.day_of_week} · {b.start_time}–{b.end_time}
+                                    </div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.1rem' }}>{b.booked_date}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </GlowCard>
+                )}
+
                 {/* Data Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                     {/* Attendance */}
@@ -658,6 +686,11 @@ const MemberDashboard = () => {
                 {/* Workout Log */}
                 <GlowCard className="neon-card" style={{ marginBottom: '2rem' }} customSize={true}>
                     <WorkoutLog memberId={user.id} />
+                </GlowCard>
+
+                {/* Progress Tracker - Weight & Body Metrics */}
+                <GlowCard className="neon-card" style={{ marginBottom: '2rem' }} customSize={true}>
+                    <ProgressTracker memberId={user.id} />
                 </GlowCard>
 
                 {/* Diet Plan */}

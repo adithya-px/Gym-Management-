@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Plus, Edit2, Trash2, X, Save, TrendingUp } from 'lucide-react';
@@ -5,7 +6,7 @@ import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
 import '../chartSetup';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const PaymentsPage = () => {
     const [payments, setPayments] = useState([]);

@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { NeonCard } from '../components/NeonCard';
@@ -7,7 +8,7 @@ import { dashboardApi } from '../api';
 import axios from 'axios';
 import '../chartSetup';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);

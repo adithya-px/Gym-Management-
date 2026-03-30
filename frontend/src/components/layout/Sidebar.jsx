@@ -11,7 +11,8 @@ import {
     Dumbbell,
     Apple,
     FileText,
-    LogOut
+    LogOut,
+    Calendar
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -50,6 +51,11 @@ const Sidebar = () => {
                 <NavLink to="/member-plans" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <UserCheck className="nav-item-icon" />
                     Assignments
+                </NavLink>
+
+                <NavLink to="/classes" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Calendar className="nav-item-icon" />
+                    Classes
                 </NavLink>
 
                 <NavLink to="/attendance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>

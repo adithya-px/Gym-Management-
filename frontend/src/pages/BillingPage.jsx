@@ -1,9 +1,10 @@
+import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CreditCard, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE;
 
 const BillingPage = () => {
     const [cycles, setCycles] = useState([]);
