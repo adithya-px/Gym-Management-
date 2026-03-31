@@ -4,6 +4,7 @@ import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CreditCard, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 
 const API = API_BASE;
 
@@ -55,7 +56,7 @@ const BillingPage = () => {
         }
     };
 
-    if (loading) return <div style={{ padding: '2rem', color: 'var(--text-muted)' }}>Loading billing data...</div>;
+    if (loading) return <div style={{ display: 'flex', height: '60vh', alignItems: 'center', justifyContent: 'center' }}><OrbitalLoader message="Loading billing data..." /></div>;
 
     return (
         <div className="page-content">

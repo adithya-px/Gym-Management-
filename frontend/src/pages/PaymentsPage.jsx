@@ -3,6 +3,7 @@ import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Plus, Edit2, Trash2, X, Save, TrendingUp } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
 import '../chartSetup';
@@ -72,7 +73,7 @@ const PaymentsPage = () => {
         } catch (err) { alert('Error deleting payment'); }
     };
 
-    if (loading) return <div style={{ color: 'var(--text-muted)', padding: '2rem' }}>Loading payments...</div>;
+    if (loading) return <div style={{ display: 'flex', height: '60vh', alignItems: 'center', justifyContent: 'center' }}><OrbitalLoader message="Loading payments..." /></div>;
 
     // Monthly Graph Data Processing
     const monthlyRevenue = {};

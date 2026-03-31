@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NeonCard } from '../components/NeonCard';
 import { Activity, LogOut, Users, Send, MessageCircle, BarChart3, Apple, Save, Trash2, Edit2 } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
+import NotificationBell from '../components/NotificationBell';
 import axios from 'axios';
 
 const API = API_BASE;
@@ -149,10 +151,10 @@ const InstructorDashboard = () => {
     if (loading) {
         return (
             <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-dark)' }}>
-                <div style={{ textAlign: 'center', color: 'var(--electric-blue)' }}>
-                    <Activity size={40} style={{ animation: 'spin 2s linear infinite' }} />
-                    <p style={{ marginTop: '1rem', fontFamily: 'Outfit' }}>Loading Coach Portal...</p>
-                </div>
+                <OrbitalLoader message="Loading Coach Portal..." />
+
+
+
             </div>
         );
     }
@@ -177,7 +179,8 @@ const InstructorDashboard = () => {
                 padding: '1rem 2rem',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                zIndex: 10
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <Activity color="var(--neon-green)" size={28} />
@@ -185,7 +188,10 @@ const InstructorDashboard = () => {
                     <span style={{ color: 'var(--electric-purple)', fontSize: '0.85rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem', fontWeight: '600' }}>Coach Portal</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>Coach {user?.name}</div>
+                    <NotificationBell role="instructor" userId={user?.id} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>Coach {user?.name}</div>
+                    </div>
                     <button onClick={logout} style={{
                         background: 'transparent', border: '1px solid var(--danger-red)',
                         color: 'var(--danger-red)', padding: '0.4rem 1rem', borderRadius: '0.25rem',

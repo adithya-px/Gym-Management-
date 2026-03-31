@@ -1,0 +1,57 @@
+@keyframes orbital-spin-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes orbital-spin-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+.orbital-loader-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+/* direction variants */
+.orbital-loader-wrap.placement-bottom  { flex-direction: column; }
+.orbital-loader-wrap.placement-top     { flex-direction: column-reverse; }
+.orbital-loader-wrap.placement-right   { flex-direction: row; }
+.orbital-loader-wrap.placement-left    { flex-direction: row-reverse; }
+
+.orbital-loader {
+  position: relative;
+  width: 4rem;   /* 64px */
+  height: 4rem;
+  flex-shrink: 0;
+}
+
+/* Three concentric rings */
+.orbital-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--text-primary, #E6EDF3);
+}
+
+.orbital-ring-1 {
+  inset: 0;
+  animation: orbital-spin-cw 1s linear infinite;
+}
+
+.orbital-ring-2 {
+  inset: 8px;
+  animation: orbital-spin-ccw 1.5s linear infinite;
+}
+
+.orbital-ring-3 {
+  inset: 16px;
+  animation: orbital-spin-cw 0.8s linear infinite;
+}
+
+.orbital-loader-message {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #8B949E);
+}

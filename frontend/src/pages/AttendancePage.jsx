@@ -3,6 +3,7 @@ import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Clock, Plus, Edit2, Trash2, X, Save, AlertCircle, Filter, List, Activity, Calendar } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
 import '../chartSetup';
@@ -75,7 +76,7 @@ const AttendancePage = () => {
         } catch (err) { alert('Error deleting attendance'); }
     };
 
-    if (loading) return <div style={{ color: 'var(--text-muted)', padding: '2rem' }}>Loading attendance...</div>;
+    if (loading) return <div style={{ display: 'flex', height: '60vh', alignItems: 'center', justifyContent: 'center' }}><OrbitalLoader message="Loading attendance..." /></div>;
 
     // Date calculations
     const getYYYYMMDD = (d) => {

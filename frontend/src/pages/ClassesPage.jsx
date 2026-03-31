@@ -4,6 +4,7 @@ import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, Clock, Users, Plus, X, UserCheck, Dumbbell, Flame, Zap, Heart } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 import axios from 'axios';
 
 const API = API_BASE;
@@ -132,10 +133,8 @@ const ClassesPage = () => {
     if (loading) {
         return (
             <div style={{ display: 'flex', height: '60vh', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center', color: 'var(--electric-blue)' }}>
-                    <Calendar size={40} style={{ animation: 'spin 2s linear infinite' }} />
-                    <p style={{ marginTop: '1rem', fontFamily: 'Outfit' }}>Loading Class Schedule...</p>
-                </div>
+                <OrbitalLoader message="Loading Class Schedule..." />
+
             </div>
         );
     }

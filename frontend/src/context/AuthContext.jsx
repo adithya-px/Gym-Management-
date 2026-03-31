@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { dashboardApi } from '../api';
+import OrbitalLoader from '../components/OrbitalLoader';
 
 const AuthContext = createContext(null);
 
@@ -31,7 +32,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     if (loading) {
-        return <div>Loading...</div>; // Could replace with Neon loading spinner
+        return (
+            <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-dark)' }}>
+                <OrbitalLoader message="Authenticating..." />
+            </div>
+        );
     }
 
     return (

@@ -3,7 +3,8 @@ import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { NeonCard } from '../components/NeonCard';
-import { Users, Briefcase, Activity, IndianRupee, Dumbbell, AlertTriangle, Loader, Apple } from 'lucide-react';
+import { Users, Briefcase, Activity, IndianRupee, Dumbbell, AlertTriangle, Apple } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 import { Line, Bar } from 'react-chartjs-2';
 import { dashboardApi } from '../api';
 import axios from 'axios';
@@ -45,10 +46,7 @@ const Dashboard = () => {
     if (loading || !stats || !charts) {
         return (
             <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center', color: 'var(--electric-blue)' }}>
-                    <Loader className="animate-spin" size={40} style={{ animation: 'spin 2s linear infinite' }} />
-                    <p style={{ marginTop: '1rem', fontFamily: 'Outfit' }}>Loading System Data...</p>
-                </div>
+                <OrbitalLoader message="Loading System Data..." />
             </div>
         );
     }

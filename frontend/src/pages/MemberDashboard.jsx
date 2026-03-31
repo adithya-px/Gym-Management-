@@ -4,6 +4,7 @@ import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, Activity, Info, LogOut, DollarSign, MessageCircle, Apple, Edit2 } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 import { Bar } from 'react-chartjs-2';
 import axios from 'axios';
 import '../chartSetup';
@@ -71,10 +72,7 @@ const MemberDashboard = () => {
     if (loading || !stats) {
         return (
             <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-dark)' }}>
-                <div style={{ textAlign: 'center', color: 'var(--electric-blue)' }}>
-                    <Activity size={40} style={{ animation: 'spin 2s linear infinite' }} />
-                    <p style={{ marginTop: '1rem', fontFamily: 'Outfit' }}>Loading Your Portal...</p>
-                </div>
+                <OrbitalLoader message="Loading Your Portal..." />
             </div>
         );
     }
@@ -296,7 +294,8 @@ const MemberDashboard = () => {
                 padding: '0 2rem',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                zIndex: 10
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <Activity color="#1D9E75" fill="#1D9E75" size={28} />

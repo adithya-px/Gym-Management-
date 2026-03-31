@@ -3,6 +3,7 @@ import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
+import OrbitalLoader from '../components/OrbitalLoader';
 import axios from 'axios';
 
 const API = API_BASE;
@@ -63,7 +64,7 @@ const InstructorsPage = () => {
         } catch (err) { alert('Error deleting instructor'); }
     };
 
-    if (loading) return <div style={{ color: 'var(--text-muted)', padding: '2rem' }}>Loading instructors...</div>;
+    if (loading) return <div style={{ display: 'flex', height: '60vh', alignItems: 'center', justifyContent: 'center' }}><OrbitalLoader message="Loading instructors..." /></div>;
 
     return (
         <div>

@@ -4,6 +4,7 @@ import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { Dumbbell, Plus, Edit2, Trash2, X, Save, AlertTriangle, Wrench, ChevronDown, ChevronUp, MessageSquare, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import OrbitalLoader from '../components/OrbitalLoader';
 import axios from 'axios';
 
 const API = API_BASE;
@@ -168,7 +169,7 @@ const EquipmentPage = () => {
         }
     });
 
-    if (loading) return <div style={{ color: 'var(--text-muted)', padding: '2rem' }}>Loading equipment...</div>;
+    if (loading) return <div style={{ display: 'flex', height: '60vh', alignItems: 'center', justifyContent: 'center' }}><OrbitalLoader message="Loading equipment..." /></div>;
 
     const validTransitions = {
         'open': ['in_progress', 'resolved', 'closed'],
