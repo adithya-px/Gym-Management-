@@ -31,6 +31,7 @@ def init_db():
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
         cursor.execute(f"USE `{db_name}`")
 
+    try:
         print("Creating tables (if not exist)...")
 
         cursor.execute("""CREATE TABLE IF NOT EXISTS ADMIN (
