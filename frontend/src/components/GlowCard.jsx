@@ -12,7 +12,8 @@ const GlowCard = ({
   children, 
   className = '', 
   glowColor = 'blue',
-  customSize = false
+  customSize = false,
+  style = {}
 }) => {
   const cardRef = useRef(null);
   const innerRef = useRef(null);
@@ -61,6 +62,7 @@ const GlowCard = ({
       border: 'var(--border-size) solid var(--backup-border)',
       position: 'relative',
       touchAction: 'none',
+      ...style
     };
   };
 
@@ -104,7 +106,7 @@ const GlowCard = ({
       );
     }
     
-    [data-glow] [data-glow] {
+    [data-glow] > .glow-inner {
       position: absolute;
       inset: 0;
       will-change: filter;
@@ -117,7 +119,7 @@ const GlowCard = ({
       border: none;
     }
     
-    [data-glow] > [data-glow]::before {
+    [data-glow] > .glow-inner::before {
       inset: -10px;
       border-width: 10px;
     }
@@ -144,7 +146,7 @@ const GlowCard = ({
         style={getInlineStyles()}
         className={`glow-card-container ${className}`}
       >
-        <div ref={innerRef} data-glow></div>
+        <div ref={innerRef} className="glow-inner" data-glow></div>
         {children}
       </div>
     </>
