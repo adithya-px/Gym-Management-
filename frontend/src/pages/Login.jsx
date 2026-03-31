@@ -1,3 +1,4 @@
+"use client";
 import { GlowCard } from '../components/GlowCard';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -27,8 +28,8 @@ const Login = () => {
             login(response.user, response.token);
 
             // Navigate to appropriate dashboard based on role
-            const redirectMap = { admin: '/', member: '/member-dashboard', instructor: '/instructor-dashboard' };
-            navigate(redirectMap[response.user.role] || '/');
+            const redirectMap = { admin: '/dashboard', member: '/member-dashboard', instructor: '/instructor-dashboard' };
+            navigate(redirectMap[response.user.role] || '/dashboard');
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to login. Please check your credentials.');
         } finally {

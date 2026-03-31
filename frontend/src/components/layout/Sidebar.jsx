@@ -28,7 +28,7 @@ const Sidebar = () => {
             </div>
 
             <nav className="sidebar-nav">
-                <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
+                <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Home className="nav-item-icon" />
                     Dashboard
                 </NavLink>

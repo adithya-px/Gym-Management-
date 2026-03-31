@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useRef } from "react";
 
 // isBackground=true → fixed full-screen canvas behind everything (no children wrapper)

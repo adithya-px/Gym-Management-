@@ -1,3 +1,4 @@
+"use client";
 import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState } from 'react';

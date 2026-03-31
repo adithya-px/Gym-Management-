@@ -1,3 +1,4 @@
+"use client";
 import API_BASE from '../config';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';

@@ -13,8 +13,8 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
 
     if (allowedRoles && !allowedRoles.includes(user?.role)) {
         // Role not authorized, redirect to appropriate dashboard
-        const redirectMap = { admin: '/', member: '/member-dashboard', instructor: '/instructor-dashboard' };
-        return <Navigate to={redirectMap[user?.role] || '/'} replace />;
+        const redirectMap = { admin: '/dashboard', member: '/member-dashboard', instructor: '/instructor-dashboard' };
+        return <Navigate to={redirectMap[user?.role] || '/dashboard'} replace />;
     }
 
     return children;

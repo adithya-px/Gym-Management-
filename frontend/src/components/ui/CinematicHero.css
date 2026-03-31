@@ -1,0 +1,243 @@
+/* CinematicHero.css - Vanilla CSS implementation of the requested Tailwind classes */
+
+.ch-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', 'DM Sans', sans-serif;
+    background-color: var(--bg-dark, #0B0C10);
+    color: var(--text-primary, #E6EDF3);
+    -webkit-font-smoothing: antialiased;
+    perspective: 1500px;
+}
+
+.ch-absolute-inset {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+}
+
+.ch-z-0 { z-index: 0; }
+.ch-z-10 { z-index: 10; }
+.ch-z-20 { z-index: 20; }
+.ch-z-30 { z-index: 30; }
+.ch-z-40 { z-index: 40; }
+.ch-z-50 { z-index: 50; }
+
+.ch-pointer-none { pointer-events: none; }
+.ch-pointer-auto { pointer-events: auto; }
+
+.ch-flex { display: flex; }
+.ch-flex-col { display: flex; flex-direction: column; }
+.ch-items-center { align-items: center; }
+.ch-justify-center { justify-content: center; }
+.ch-justify-between { justify-content: space-between; }
+.ch-justify-evenly { justify-content: space-evenly; }
+.ch-justify-end { justify-content: flex-end; }
+.ch-text-center { text-align: center; }
+.ch-text-left { text-align: left; }
+
+.ch-w-screen { width: 100vw; }
+.ch-w-full { width: 100%; }
+.ch-h-full { height: 100%; }
+
+.ch-px-4 { padding-left: 1rem; padding-right: 1rem; }
+.ch-py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.ch-px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+.ch-py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.ch-pt-12 { padding-top: 3rem; }
+.ch-pb-8 { padding-bottom: 2rem; }
+
+.ch-mb-1 { margin-bottom: 0.25rem; }
+.ch-mb-2 { margin-bottom: 0.5rem; }
+.ch-mb-6 { margin-bottom: 1.5rem; }
+.ch-mb-8 { margin-bottom: 2rem; }
+.ch-mb-12 { margin-bottom: 3rem; }
+.ch-mt-0_5 { margin-top: 0.125rem; }
+
+.ch-gap-3 { gap: 0.75rem; }
+.ch-gap-4 { gap: 1rem; }
+.ch-gap-6 { gap: 1.5rem; }
+.ch-gap-8 { gap: 2rem; }
+
+.ch-font-bold { font-weight: 700; }
+.ch-font-extrabold { font-weight: 800; }
+.ch-font-black { font-weight: 900; }
+.ch-font-semibold { font-weight: 600; }
+.ch-font-medium { font-weight: 500; }
+.ch-font-light { font-weight: 300; }
+.ch-font-normal { font-weight: 400; }
+
+.ch-tracking-tight { letter-spacing: -0.025em; }
+.ch-tracking-tighter { letter-spacing: -0.05em; }
+.ch-tracking-widest { letter-spacing: 0.1em; }
+.ch-uppercase { text-transform: uppercase; }
+
+/* Text Sizing */
+.ch-text-xs { font-size: 0.75rem; line-height: 1rem; }
+.ch-text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.ch-text-base { font-size: 1rem; line-height: 1.5rem; }
+.ch-text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.ch-text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.ch-text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.ch-text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+.ch-text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+.ch-text-5xl { font-size: 3rem; line-height: 1; }
+.ch-text-6xl { font-size: 3.75rem; line-height: 1; }
+
+@media (min-width: 768px) {
+  .ch-md-text-3xl { font-size: 1.875rem; }
+  .ch-md-text-6xl { font-size: 3.75rem; }
+  .ch-md-text-7xl { font-size: 4.5rem; }
+  .ch-md-text-6rem { font-size: 6rem; }
+  .ch-md-text-base { font-size: 1rem; }
+  .ch-md-text-xl { font-size: 1.25rem; }
+  .ch-md-flex-row { flex-direction: row; }
+  .ch-md-block { display: block; }
+  .ch-md-hidden { display: none; }
+}
+
+@media (min-width: 1024px) {
+  .ch-lg-text-4xl { font-size: 2.25rem; }
+  .ch-lg-text-6rem { font-size: 6rem; }
+  .ch-lg-text-7xl { font-size: 4.5rem; }
+  .ch-lg-text-8rem { font-size: 8rem; }
+  .ch-lg-text-lg { font-size: 1.125rem; }
+  .ch-lg-grid { display: grid; }
+  .ch-lg-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ch-lg-px-12 { padding-left: 3rem; padding-right: 3rem; }
+  .ch-lg-py-0 { padding-top: 0; padding-bottom: 0; }
+  .ch-lg-justify-end { justify-content: flex-end; }
+  .ch-lg-top-12 { top: 3rem; }
+  .ch-lg-bottom-20 { bottom: 5rem; }
+  .ch-lg-left-neg-80 { left: -80px; }
+  .ch-lg-right-neg-80 { right: -80px; }
+  .ch-lg-p-4 { padding: 1rem; }
+}
+
+/* Colors & Effects */
+.ch-text-white { color: #ffffff; }
+.ch-text-black { color: #000000; }
+.ch-text-muted-foreground { color: var(--text-muted, #6E7681); }
+.ch-text-blue-100 { color: #dbeafe; }
+.ch-text-blue-200 { color: rgba(191, 219, 254, 0.5); }
+.ch-text-neutral-200 { color: #e5e5e5; }
+.ch-text-neutral-400 { color: #a3a3a3; }
+.ch-text-neutral-500 { color: #737373; }
+.ch-opacity-50 { opacity: 0.5; }
+.ch-opacity-70 { opacity: 0.7; }
+.ch-leading-none { line-height: 1; }
+.ch-leading-relaxed { line-height: 1.625; }
+.ch-max-w-xl { max-width: 36rem; }
+.ch-max-w-sm { max-width: 24rem; }
+.ch-mx-auto { margin-left: auto; margin-right: auto; }
+
+.ch-bg-black { background-color: #000000; }
+.ch-bg-white-5 { background-color: rgba(255,255,255,0.05); }
+.ch-bg-white-20 { background-color: rgba(255,255,255,0.2); }
+.ch-bg-green-500 { background-color: #22c55e; }
+.ch-bg-neutral-300 { background-color: #d4d4d4; }
+.ch-bg-neutral-600 { background-color: #525252; }
+.ch-bg-screen { background-color: #050914; }
+
+.ch-border { border: 1px solid; }
+.ch-border-white-10 { border-color: rgba(255,255,255,0.1); }
+.ch-border-blue-400-20 { border-color: rgba(96,165,250,0.2); }
+.ch-border-blue-400-30 { border-color: rgba(96,165,250,0.3); }
+.ch-border-emerald-400-20 { border-color: rgba(52,211,153,0.2); }
+.ch-border-indigo-400-30 { border-color: rgba(129,140,248,0.3); }
+
+.ch-rounded-full { border-radius: 9999px; }
+.ch-rounded-xl { border-radius: 0.75rem; }
+.ch-rounded-2xl { border-radius: 1rem; }
+.ch-rounded-md { border-radius: 0.375rem; }
+
+.ch-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+.ch-shadow-inner { box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); }
+.ch-drop-shadow-md { filter: drop-shadow(0 4px 3px rgba(0,0,0,0.07)) drop-shadow(0 2px 2px rgba(0,0,0,0.06)); }
+.ch-drop-shadow-lg { filter: drop-shadow(0 10px 8px rgba(0,0,0,0.04)) drop-shadow(0 4px 3px rgba(0,0,0,0.1)); }
+
+.ch-w-1_5 { width: 0.375rem; } .ch-h-1_5 { height: 0.375rem; }
+.ch-w-4 { width: 1rem; } .ch-h-4 { height: 1rem; }
+.ch-w-8 { width: 2rem; } .ch-h-8 { height: 2rem; }
+.ch-w-9 { width: 2.25rem; } .ch-h-9 { height: 2.25rem; }
+.ch-w-10 { width: 2.5rem; } .ch-h-10 { height: 2.5rem; }
+.ch-w-12 { width: 3rem; } .ch-h-12 { height: 3rem; }
+.ch-w-16 { width: 4rem; } 
+.ch-w-20 { width: 5rem; }
+.ch-w-24 { width: 6rem; }
+.ch-w-44 { width: 11rem; } .ch-h-44 { height: 11rem; }
+
+/* Positional Specifics */
+.ch-top-5px { top: 5px; }
+.ch-left-1_2 { left: 50%; }
+.ch-bottom-2 { bottom: 0.5rem; }
+.ch-translate-x-neg-1_2 { transform: translateX(-50%); }
+
+/* Grid specific fixes for components */
+.ch-order-1 { order: 1; }
+.ch-order-2 { order: 2; }
+.ch-order-3 { order: 3; }
+.ch-overflow-hidden { overflow: hidden; }
+
+/* Safe scale wrapper */
+.ch-scale-wrapper {
+  transform: scale(0.65);
+}
+@media (min-width: 768px) {
+  .ch-scale-wrapper {
+    transform: scale(0.85);
+  }
+}
+@media (min-width: 1024px) {
+  .ch-scale-wrapper {
+    transform: scale(1);
+    order: 2; /* lg:order-2 */
+  }
+  .ch-order-lg-1 { order: 1; }
+  .ch-order-lg-3 { order: 3; }
+}
+
+.ch-max-w-7xl { max-width: 80rem; }
+.ch-w-92vw { width: 92vw; } .ch-h-92vh { height: 92vh; }
+.ch-rounded-32px { border-radius: 32px; }
+
+@media (min-width: 768px) {
+  .ch-w-85vw { width: 85vw; } .ch-h-85vh { height: 85vh; }
+  .ch-rounded-40px { border-radius: 40px; }
+}
+
+/* Gradients */
+.ch-bg-grad-blue {
+    background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.05));
+}
+.ch-bg-grad-emerald {
+    background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.05));
+}
+.ch-bg-grad-indigo {
+    background: linear-gradient(to bottom, rgba(99, 102, 241, 0.2), rgba(49, 46, 129, 0.1));
+}
+
+/* Specific elements padding and alignment */
+.ch-badge {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+}
+.ch-badge-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06);
+}
+
+.ch-text-xs-force { font-size: 0.75rem; }
+.ch-text-10px { font-size: 10px; }
+
+/* GSAP injected styles will remain in the TSX inside styled block */

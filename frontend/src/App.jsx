@@ -18,6 +18,7 @@ import BillingPage from './pages/BillingPage';
 import Register from './pages/Register';
 import PendingApprovalsPage from './pages/PendingApprovalsPage';
 import ClassesPage from './pages/ClassesPage';
+import LandingPage from './pages/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ParticleTextEffect } from './components/ParticleTextEffect';
@@ -37,6 +38,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -62,25 +64,24 @@ function App() {
 
           {/* Admin Protected Routes */}
           <Route
-            path="/"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <MainLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="members" element={<MembersPage />} />
-            <Route path="instructors" element={<InstructorsPage />} />
-            <Route path="plans" element={<PlansPage />} />
-            <Route path="member-plans" element={<MemberPlansPage />} />
-            <Route path="attendance" element={<AttendancePage />} />
-            <Route path="payments" element={<PaymentsPage />} />
-            <Route path="equipment" element={<EquipmentPage />} />
-            <Route path="diet-plans" element={<DietPlansPage />} />
-            <Route path="billing" element={<BillingPage />} />
-            <Route path="approvals" element={<PendingApprovalsPage />} />
-            <Route path="classes" element={<ClassesPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/members" element={<MembersPage />} />
+            <Route path="/instructors" element={<InstructorsPage />} />
+            <Route path="/plans" element={<PlansPage />} />
+            <Route path="/member-plans" element={<MemberPlansPage />} />
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/equipment" element={<EquipmentPage />} />
+            <Route path="/diet-plans" element={<DietPlansPage />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/approvals" element={<PendingApprovalsPage />} />
+            <Route path="/classes" element={<ClassesPage />} />
           </Route>
 
           {/* Catch-all redirect */}
