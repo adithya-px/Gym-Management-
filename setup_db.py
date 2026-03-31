@@ -8,7 +8,19 @@ load_dotenv()
 
 def init_db():
     print("Connecting to MySQL...")
+    db_name = os.getenv("DB_NAME", "gym_management")
     try:
+        # First try to connect with the database name (Standard for PaaS like Railway)
+        conn = mysql.connector.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            port=int(os.getenv("DB_PORT", "3306")),
+            database=db_name
+        )
+        cursor = conn.cursor()
+    except Exception as e:
+        # If database doesn't exist, connect globally and create it (Standard for Local Development)
         conn = mysql.connector.connect(
             host=os.getenv("DB_HOST", "localhost"),
             user=os.getenv("DB_USER", "root"),
@@ -16,10 +28,8 @@ def init_db():
             port=int(os.getenv("DB_PORT", "3306"))
         )
         cursor = conn.cursor()
-
-        # Create DB if not exists
-        cursor.execute("CREATE DATABASE IF NOT EXISTS gym_management")
-        cursor.execute("USE gym_management")
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
+        cursor.execute(f"USE `{db_name}`")
 
         print("Creating tables (if not exist)...")
 
@@ -550,7 +560,8 @@ if __name__ == "__main__":
                 port=int(os.getenv("DB_PORT", "3306"))
             )
             cursor = conn.cursor()
-            cursor.execute("DROP DATABASE IF EXISTS gym_management")
+            db_name = os.getenv("DB_NAME", "gym_management")
+            cursor.execute(f"DROP DATABASE IF EXISTS `{db_name}`")
             conn.commit()
             cursor.close()
             conn.close()
