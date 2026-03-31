@@ -45,11 +45,8 @@ const Register = () => {
     };
 
     return (
-        <div style={{
-            display: 'flex', minHeight: '100vh',
-            alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'var(--bg-dark)', padding: '2rem'
-        }}>
+        <ParticleTextEffect>
+        <div style={{ padding: '2rem 1rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
             <GlowCard className="neon-card" style={{ maxWidth: '500px', width: '100%', padding: '2.5rem' }} customSize={true}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--neon-green)' }}>
                     <Activity size={48} />
@@ -129,7 +126,8 @@ const Register = () => {
                     Already have an account? <Link to="/login" style={{ color: 'var(--electric-blue)', textDecoration: 'none', fontWeight: '500' }}>Sign In here</Link>
                 </div>
             </GlowCard>
-        </div>
+            </div>
+        </ParticleTextEffect>
     );
 };
 

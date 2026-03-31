@@ -42,7 +42,7 @@ const GlowCard = ({
       '--spread': spread,
       '--radius': '14',
       '--border': '3',
-      '--backdrop': 'hsl(0 0% 60% / 0.12)',
+      '--backdrop': 'hsl(0 0% 8% / 0.4)',
       '--backup-border': 'var(--backdrop)',
       '--size': '200',
       '--outer': '1',
@@ -127,10 +127,11 @@ const GlowCard = ({
     .glow-card-container {
       border-radius: 1rem;
       position: relative;
-      background: var(--bg-card);
+      background: rgba(22, 27, 34, 0.35);
       box-shadow: 0 1rem 2rem -1rem black;
       padding: 1.5rem;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       overflow: hidden;
       display: flex;
       flex-direction: column;

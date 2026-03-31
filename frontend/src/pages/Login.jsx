@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Activity, Lock, User, AlertCircle } from 'lucide-react';
 import { authApi } from '../api';
+import { ParticleTextEffect } from '../components/ParticleTextEffect';
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -36,15 +37,9 @@ const Login = () => {
     };
 
     return (
-        <div style={{
-            display: 'flex',
-            height: '100vh',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--bg-dark)',
-            padding: '1rem'
-        }}>
-            <GlowCard className="neon-card" style={{
+        <ParticleTextEffect>
+            <div style={{ padding: '1rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <GlowCard className="neon-card" style={{
                 maxWidth: '400px',
                 width: '100%',
                 padding: '2.5rem',
@@ -165,7 +160,8 @@ const Login = () => {
                     <p>Demo Coach: john@neoniron.com / coach123</p>
                 </div>
             </GlowCard>
-        </div>
+            </div>
+        </ParticleTextEffect>
     );
 };
 

@@ -20,6 +20,7 @@ import PendingApprovalsPage from './pages/PendingApprovalsPage';
 import ClassesPage from './pages/ClassesPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ParticleTextEffect } from './components/ParticleTextEffect';
 
 // Placeholder components for routing
 const PlaceholderPage = ({ title }) => (
@@ -31,6 +32,8 @@ const PlaceholderPage = ({ title }) => (
 function App() {
   return (
     <AuthProvider>
+      {/* Fixed particle canvas – sits behind every page */}
+      <ParticleTextEffect isBackground={true} />
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
