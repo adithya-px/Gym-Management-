@@ -657,7 +657,7 @@ const MemberDashboard = () => {
                                             >
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                                                     <span style={{ color: 'var(--text-primary)', fontWeight: 900, fontSize: '1.1rem' }}>
-                                                        ${Number.isFinite(amountNum) ? amountNum.toFixed(2) : pay.amount}
+                                                        ₹{Number.isFinite(amountNum) ? amountNum.toFixed(2) : pay.amount}
                                                     </span>
                                                     <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                                                         {formatPrettyDate(pay.payment_date)}
@@ -676,7 +676,7 @@ const MemberDashboard = () => {
 
                                 <div style={{ paddingTop: '0.95rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: 900 }}>
                                     <span>Total paid · {currentPaymentYear}</span>
-                                    <span style={{ color: '#1D9E75' }}>${totalPaidThisYear.toFixed(2)}</span>
+                                    <span style={{ color: '#1D9E75' }}>₹{totalPaidThisYear.toFixed(2)}</span>
                                 </div>
                             </div>
                         )}

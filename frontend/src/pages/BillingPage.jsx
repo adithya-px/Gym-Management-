@@ -96,7 +96,7 @@ const BillingPage = () => {
                                     <tr key={cycle.cycle_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s' }}>
                                         <td style={{ padding: '1.2rem', color: 'var(--text-primary)' }}>{cycle.member_name}</td>
                                         <td style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>{cycle.plan_name}</td>
-                                        <td style={{ padding: '1.2rem', color: 'var(--text-primary)', fontWeight: 600 }}>${cycle.amount}</td>
+                                        <td style={{ padding: '1.2rem', color: 'var(--text-primary)', fontWeight: 600 }}>₹{cycle.amount}</td>
                                         <td style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>
                                             {cycle.due_date}
                                         </td>

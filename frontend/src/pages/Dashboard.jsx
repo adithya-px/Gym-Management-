@@ -2,7 +2,7 @@ import API_BASE from '../config';
 import { GlowCard } from '../components/GlowCard';
 import React, { useState, useEffect } from 'react';
 import { NeonCard } from '../components/NeonCard';
-import { Users, Briefcase, Activity, DollarSign, Dumbbell, AlertTriangle, Loader, Apple } from 'lucide-react';
+import { Users, Briefcase, Activity, IndianRupee, Dumbbell, AlertTriangle, Loader, Apple } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import { dashboardApi } from '../api';
 import axios from 'axios';
@@ -76,7 +76,7 @@ const Dashboard = () => {
         labels: charts.revenue.labels,
         datasets: [
             {
-                label: 'Revenue ($)',
+                label: 'Revenue (₹)',
                 data: charts.revenue.data,
                 backgroundColor: '#B829EA',
                 borderRadius: 4,
@@ -116,8 +116,8 @@ const Dashboard = () => {
                     accent="secondary"
                 />
                 <NeonCard
-                    title={<><DollarSign size={18} /> Monthly Revenue</>}
-                    value={`$${stats.monthlyRevenue}`}
+                    title={<><IndianRupee size={18} /> Monthly Revenue</>}
+                    value={`₹${stats.monthlyRevenue}`}
                     accent="tertiary"
                 />
                 <NeonCard
@@ -142,7 +142,7 @@ const Dashboard = () => {
 
                 {/* Chart Area 2 - Monthly Revenue */}
                 <GlowCard className="neon-card" style={{ minHeight: '320px', display: 'flex', flexDirection: 'column' }} customSize={true}>
-                    <div className="card-title text-accent-tertiary"><DollarSign size={18} /> Monthly Revenue</div>
+                    <div className="card-title text-accent-tertiary"><IndianRupee size={18} /> Monthly Revenue</div>
                     <div style={{ flex: 1, position: 'relative', marginTop: '1rem' }}>
                         <Bar data={revenueData} options={chartOptions} />
                     </div>

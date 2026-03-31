@@ -93,7 +93,7 @@ const PaymentsPage = () => {
     const chartData = {
         labels: chartLabels,
         datasets: [{
-            label: 'Monthly Revenue ($)',
+            label: 'Monthly Revenue (₹)',
             data: sortedMonths.map(m => monthlyRevenue[m]),
             backgroundColor: '#C5A3FF',
             borderRadius: 4,
@@ -141,7 +141,7 @@ const PaymentsPage = () => {
                                 scales: {
                                     y: {
                                         ticks: {
-                                            callback: (value) => `$${value}`
+                                            callback: (value) => `₹${value}`
                                         }
                                     }
                                 }
@@ -173,7 +173,7 @@ const PaymentsPage = () => {
                             </select>
                         </div>
                         <div>
-                            <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Amount ($)</label>
+                            <label style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Amount (₹)</label>
                             <input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required style={{ width: '100%', padding: '0.6rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.4rem', color: 'var(--text-primary)' }} />
                         </div>
                         <div>
@@ -224,7 +224,7 @@ const PaymentsPage = () => {
                                 <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>#{p.payment_id}</td>
                                 <td style={{ padding: '0.85rem 1rem', color: 'var(--text-primary)', fontWeight: '500' }}>{getMemberName(p.member_id)}</td>
                                 <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>{getPlanName(p.plan_id)}</td>
-                                <td style={{ padding: '0.85rem 1rem', color: 'var(--neon-green)', fontWeight: 'bold' }}>${p.amount}</td>
+                                <td style={{ padding: '0.85rem 1rem', color: 'var(--neon-green)', fontWeight: 'bold' }}>₹{p.amount}</td>
                                 <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>{p.payment_date}</td>
                                 <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>{p.valid_until}</td>
                                 <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>{p.payment_mode}</td>
