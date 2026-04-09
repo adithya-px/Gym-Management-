@@ -1,10 +1,7 @@
 import mysql.connector
 import os
-from dotenv import load_dotenv
+import sys
 from datetime import date, timedelta
-
-# Load env variables
-load_dotenv()
 
 def init_db():
     print("Connecting to MySQL...")
@@ -540,8 +537,9 @@ def init_db():
         conn.commit()
         print("Seed data inserted successfully!")
 
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
+    except Exception as err:
+        print(f"[setup_db] ERROR: {err}", file=sys.stderr)
+        sys.exit(1)
     finally:
         if 'cursor' in locals() and cursor:
             cursor.close()
@@ -549,7 +547,6 @@ def init_db():
             conn.close()
 
 if __name__ == "__main__":
-    import sys
     if '--force' in sys.argv:
         # Drop and recreate everything
         print("Force mode: dropping all tables first...")
